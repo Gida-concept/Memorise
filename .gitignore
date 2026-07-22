@@ -21,6 +21,6 @@ tmp/
 temp/
 *.log
 
-# Docs — keep only root README.md, keep package-level READMEs
+# Docs moved to docs/ — keep root clean
 /*.md
 !/README.md
