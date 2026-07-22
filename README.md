@@ -350,17 +350,6 @@ PM Agent appears as an **MCP server** in your IDE. Your AI assistant can:
 - Enforce rules before you commit (e.g., "log decision before closing related ticket")
 - Surface blockers in the sidebar
 
-### Bring Your Own Model
-
-```toml
-# ~/.config/pm-agent/config.toml
-[ai]
-provider = "anthropic"  # or "openai", "google", "local"
-api_key = "${ANTHROPIC_API_KEY}"
-model = "claude-sonnet-4-20250514"
-# PM Agent never calls the AI directly —
-# it only exposes context TO the AI via MCP
-```
 
 ---
 
@@ -427,54 +416,11 @@ model = "claude-sonnet-4-20250514"
 
 ### Tech Stack
 
-- **Daemon + MCP Server**: Node.js (Fastify, `@modelcontextprotocol/sdk`, `better-sqlite3`)
+- **MCP Server**: Node.js (`@modelcontextprotocol/sdk`, `better-sqlite3`)
 - **CLI**: Node.js (Commander.js, Inquirer.js, Chalk, Ora)
-- **IDE Extensions**: TypeScript (VS Code API, Zed extension API)
-- **Desktop**: Electron or Tauri (cross-platform)
 - **State**: SQLite (local-first, `better-sqlite3`)
-- **Rules**: TOML (human-readable, version-controllable, `toml` npm package)
+- **Rules**: TOML (human-readable, version-controllable)
 - **Package Manager**: npm workspaces (monorepo)
-
-### Project Structure
-
-```
-pm-agent/
-├── packages/
-│   ├── core/              # Memory layer + rules engine (shared library)
-│   │   ├── src/
-│   │   │   ├── db.js          # SQLite wrapper (better-sqlite3)
-│   │   │   ├── graph.js       # Temporal project graph
-│   │   │   ├── rules.js       # Rules engine (TOML parsing, enforcement)
-│   │   │   ├── integrations/  # GitHub, Linear, Slack, Notion, Jira, Figma
-│   │   │   └── index.js
-│   │   └── package.json
-│   ├── mcp-server/        # MCP server (stdio + SSE transports)
-│   │   ├── src/
-│   │   │   ├── server.js      # MCP server setup
-│   │   │   ├── tools/         # Tool handlers (pm_get_context, etc.)
-│   │   │   └── index.js
-│   │   └── package.json
-│   ├── cli/               # Terminal interface
-│   │   ├── src/
-│   │   │   ├── commands/      # blockers, log, scope, standup, note, init
-│   │   │   ├── prompts.js     # Interactive prompts
-│   │   │   └── index.js
-│   │   └── package.json
-│   ├── desktop/           # Electron or Tauri app
-│   │   ├── src/
-│   │   │   ├── main/          # Main process
-│   │   │   ├── renderer/      # UI renderer
-│   │   │   └── preload.js
-│   │   └── package.json
-│   └── vscode-ext/        # VS Code extension
-│       ├── src/
-│       │   ├── extension.ts
-│       │   └── sidebarProvider.ts
-│       └── package.json
-├── rules.toml
-├── package.json           # Workspace root
-└── README.md
-```
 
 ---
 
@@ -688,53 +634,7 @@ Memory Types:
 
 Everything is **automatically linked**. Ask "what's related to AUTH-91?" and get decisions, notes, blockers, and tasks in one view.
 
----
 
-## Configuration
-
-```toml
-# ~/.config/pm-agent/config.toml
-[project]
-name = "auth-service"
-root = "/Users/you/projects/auth-service"
-
-[integrations.github]
-repo = "acme-corp/auth-service"
-token = "${GITHUB_TOKEN}"  # from OS keychain
-
-[integrations.linear]
-workspace = "ACME"
-api_key = "${LINEAR_API_KEY}"
-
-[integrations.slack]
-workspace = "acme"
-token = "${SLACK_TOKEN}"
-channels = ["#product", "#engineering"]
-
-[integrations.notion]
-workspace = "acme"
-token = "${NOTION_TOKEN}"
-
-[ai]
-# PM Agent doesn't call AI APIs directly.
-# This config is only for the optional "suggest" feature
-# when no MCP client is available.
-provider = "anthropic"
-model = "claude-sonnet-4-20250514"
-
-[rules]
-config_path = "~/.config/pm-agent/rules.toml"
-enabled = true
-
-[memory]
-storage = "sqlite"
-path = "~/.local/share/pm-agent/auth-service.db"
-retention_days = 365
-
-[sync]
-enabled = false  # opt-in for team sharing
-encrypt = true
-```
 
 ---
 
