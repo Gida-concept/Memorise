@@ -1,0 +1,26 @@
+node_modules/
+.pnpm-store/
+dist/
+build/
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+.env
+.env.local
+.env.*.local
+coverage/
+.nyc_output/
+.pm-agent/
+*.db
+*.db-wal
+*.db-shm
+tmp/
+temp/
+*.log
+
+# Docs — keep only root README.md, keep package-level READMEs
+/*.md
+!/README.md
