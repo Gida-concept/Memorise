@@ -24,7 +24,7 @@ const program = new Command();
 program
   .name('pm')
   .description('PM Agent -- AI-native product management for developers')
-  .version('0.1.2')
+  .version('0.1.3')
   .option('--config <path>', 'Path to config file')
   .option('-p, --project <name>', 'Project name')
   .option('--verbose', 'Detailed output with debug info', false)

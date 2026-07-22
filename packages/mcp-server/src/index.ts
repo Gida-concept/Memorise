@@ -298,7 +298,7 @@ const HANDLERS: Record<string, (args: Record<string, unknown>) => Promise<Record
 // ── Server setup ─────────────────────────────────────────────────
 
 const server = new Server(
-  { name: 'pm-agent-mcp', version: '0.1.2' },
+  { name: 'pm-agent-mcp', version: '0.1.3' },
   { capabilities: { tools: {} } },
 );
 
