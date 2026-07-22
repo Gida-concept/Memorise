@@ -21,6 +21,7 @@ tmp/
 temp/
 *.log
 
-# Docs moved to docs/ — keep root clean
+# Docs kept local — ignored in git
 /*.md
 !/README.md
+/docs/
