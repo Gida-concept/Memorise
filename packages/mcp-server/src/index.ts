@@ -23,6 +23,10 @@ import { handleAnalyzeImpact } from './tools/analyze-impact.js';
 import { handleSearchCodebase } from './tools/search-codebase.js';
 import { handleGetArchitecture } from './tools/get-architecture.js';
 import { handleGetFileContext } from './tools/get-file-context.js';
+import { autoEnforce } from './tools/auto-enforce.js';
+
+// Tools that are exempt from auto-enforcement (meta-tools)
+const AUTO_ENFORCE_SKIP = new Set(['pm_enforce_rules', 'pm_add_rule']);
 
 // Shared result content helper
 function textContent(text: string): { type: 'text'; text: string } {
@@ -297,8 +301,9 @@ const HANDLERS: Record<string, (args: Record<string, unknown>) => Promise<Record
 
 // ── Server setup ─────────────────────────────────────────────────
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const server = new Server(
-  {
+  ({
     name: 'pm-agent-mcp',
     version: '0.1.3',
     instructions: `You are connected to **PM Agent** — a project management context server for AI coding assistants.
@@ -321,8 +326,10 @@ const server = new Server(
 5. **Review notes** — call \`pm_get_notes\` to check recent observations before starting new work
 6. **Check blockers** — call \`pm_get_blockers\` before planning work that might conflict with blocked items
 
-PM Agent's tools are always available. Use them proactively — do not wait to be asked.`,
-  },
+PM Agent's tools are always available. Use them proactively — do not wait to be asked.
+
+**Auto-enforcement is active** — rules are checked automatically on every tool call. If a \`hard\` rule's trigger matches the tool and arguments, the call is blocked before execution. Write rules with expression-compatible triggers (e.g. \`tool_name == 'pm_log_decision'\`) to take full advantage of auto-enforcement.`,
+  }) as any,
   { capabilities: { tools: {} } },
 );
 
@@ -341,8 +348,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     );
   }
 
+  const rawArgs = (args as Record<string, unknown>) ?? {};
+
+  // Auto-enforce rules before executing the handler (skip meta-tools to avoid loops)
+  if (!AUTO_ENFORCE_SKIP.has(name)) {
+    const enforcement = autoEnforce(name, rawArgs);
+    if (enforcement.blocked) {
+      return { content: [textContent(JSON.stringify(enforcement.result, null, 2))] };
+    }
+  }
+
   try {
-    const result = await handler((args as Record<string, unknown>) ?? {});
+    const result = await handler(rawArgs);
     return { content: [textContent(JSON.stringify(result, null, 2))] };
   } catch (err) {
     if (err instanceof McpError) throw err;

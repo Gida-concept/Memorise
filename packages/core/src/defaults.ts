@@ -50,6 +50,15 @@ export const DEFAULT_RULES_TOML: string = `# ── PM Agent Default Rules ─�
 #
 # Rules enforce PM discipline and coding standards.
 # Severity: hard (blocks), soft (confirm), info (notify)
+#
+# Auto-enforcement is active on every tool call.
+# Available context variables:
+#   tool_name   — the MCP tool being called (e.g. "pm_log_decision")
+#   operation   — inferred operation: read / log / add / scan / enforce / ...
+#   entity      — inferred target: context / decision / note / rule / ...
+#   tool_args   — the full arguments object passed to the tool
+#   <arg-name>  — each tool argument is available directly (e.g. title, body)
+# Triggers are boolean expressions. Use ==, !=, contains(), &&, ||.
 
 # ── PM Discipline ────────────────────────────────────────────────
 
@@ -99,4 +108,44 @@ condition = "file.contains('api.')"
 action = "block: 'Direct API calls not allowed in {file.path}'"
 severity = "hard"
 description = "Blocks direct API calls in source files"
+
+# ── Auto-Enforcement Rules ───────────────────────────────────────
+# These rules are evaluated automatically on every tool call.
+# The context includes tool_name, operation, entity, and all tool arguments.
+# Write triggers as boolean expressions referencing these variables.
+#
+# Guide for writing auto-enforceable rules:
+# - tool_name == 'pm_log_decision'  — fires when logging a decision
+# - tool_name == 'pm_log_note'      — fires when logging a note
+# - tool_name == 'pm_add_rule'      — fires when adding a rule
+# - body.contains('architecture')   — checks if arg "body" contains text
+# - title && title.contains('X')    — safe check (guards against null)
+# - Use && for AND, || for OR
+
+[[rule]]
+scope = "all"
+name = "ask-permission-major-decisions"
+trigger = "tool_name == 'pm_log_decision'"
+condition = "body && (body.contains('architecture') || body.contains('scope') || body.contains('significant'))"
+action = "block: 'Decision may affect project direction ({title}). Ask the user for explicit permission before logging significant decisions.'"
+severity = "hard"
+description = "Blocks logging decisions that touch architecture, scope, or significant changes without permission."
+
+[[rule]]
+scope = "all"
+name = "confirm-scope-changes"
+trigger = "tool_name == 'pm_log_decision'"
+condition = "title && (title.contains('scope') || title.contains('sprint'))"
+action = "confirm: 'Are you sure this scope-affecting decision is approved? Title: {title}'"
+severity = "soft"
+description = "Confirms scope-related decisions before logging them."
+
+[[rule]]
+scope = "all"
+name = "alert-on-git-refs-in-notes"
+trigger = "tool_name == 'pm_log_note'"
+condition = "content && (content.contains('git push') || content.contains('git commit'))"
+action = "notify: 'Note references a git write operation ({content}). Ensure the user has approved this action.'"
+severity = "info"
+description = "Raises awareness when notes reference git push or commit operations."
 `;

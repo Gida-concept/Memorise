@@ -534,6 +534,47 @@ Your AI will read these instructions and follow them.
 
 ---
 
+### Auto-Enforcement — Rules That Actually Block
+
+> **New in v0.1.3** — Rules are now evaluated **automatically on every tool call**. No manual calling of `pm_enforce_rules` required.
+
+When a rule's scope is `all` (or matches the tool's context), the engine checks it before the tool executes. If a **hard** rule's trigger matches, the call is **blocked** and the rule's message is returned instead.
+
+#### How It Works
+
+Every tool call generates a context object with:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `tool_name` | The MCP tool being called | `pm_log_decision` |
+| `operation` | Inferred operation type | `read`, `log`, `add`, `scan` |
+| `entity` | Inferred target entity | `context`, `decision`, `note` |
+| `tool_args` | Full arguments object | `{title, body, author}` |
+| _Each arg directly_ | Every argument by name | `title`, `body`, `content` |
+
+#### Writing Auto-Enforceable Rules
+
+Triggers must be **boolean expressions** using the expression engine (`==`, `!=`, `contains()`, `&&`, `||`):
+
+```toml
+# Good — expression-compatible trigger that matches a tool
+[[rule]]
+scope = "all"
+name = "ask-permission-decisions"
+trigger = "tool_name == 'pm_log_decision'"
+condition = "body && (body.contains('architecture') || body.contains('scope'))"
+action = "block: 'Decision may affect project direction ({title}). Ask permission first.'"
+severity = "hard"
+description = "Blocks decision logging without permission."
+
+# Bad — natural language won't parse (silently fails)
+trigger = "about to make a significant decision"  # ✗ won't work
+```
+
+**Important:** Auto-enforcement does NOT apply to `pm_enforce_rules` and `pm_add_rule` themselves (to avoid loops and allow rule management).
+
+---
+
 ## MCP Tools Exposed
 
 | Tool               | What Your AI Can Ask                              |
