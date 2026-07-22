@@ -298,7 +298,31 @@ const HANDLERS: Record<string, (args: Record<string, unknown>) => Promise<Record
 // ── Server setup ─────────────────────────────────────────────────
 
 const server = new Server(
-  { name: 'pm-agent-mcp', version: '0.1.3' },
+  {
+    name: 'pm-agent-mcp',
+    version: '0.1.3',
+    instructions: `You are connected to **PM Agent** — a project management context server for AI coding assistants.
+
+**What PM Agent provides:**
+- **Decisions** — architecture decision records with rationale and links
+- **Blockers** — active and resolved blockers with severity
+- **Notes** — tagged observations and project insights
+- **Scope** — sprint capacity and risk assessment
+- **Rules** — hard/soft enforcement rules that guard project behavior
+- **Codebase scanning** — file registry, dependencies, architecture overview
+- **Dependency graphs** — file-level dependency and impact analysis
+
+**Required behavior — follow these rules on every interaction:**
+
+1. **Before proposing changes**, call \`pm_get_context\` to check current project state (blockers, decisions, rules)
+2. **Before modifying scope**, call \`pm_check_scope\` to verify sprint capacity and risk
+3. **Check rules** — call \`pm_enforce_rules\` or \`pm_get_decisions\` before finalizing any change that could affect project direction
+4. **Log decisions** — after reaching significant agreement, call \`pm_log_decision\` to persist the rationale
+5. **Review notes** — call \`pm_get_notes\` to check recent observations before starting new work
+6. **Check blockers** — call \`pm_get_blockers\` before planning work that might conflict with blocked items
+
+PM Agent's tools are always available. Use them proactively — do not wait to be asked.`,
+  },
   { capabilities: { tools: {} } },
 );
 

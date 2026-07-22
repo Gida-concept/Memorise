@@ -25,3 +25,8 @@ temp/
 /*.md
 !/README.md
 /docs/
+
+# Personal config files — never upload to GitHub
+/.mcp.json
+/CLAUDE.md
+/AGENTS.md

@@ -108,9 +108,11 @@
        ═══════════════════════════════════════════ */
     .navbar {
       padding: 0;
-      background: transparent;
+      background: rgba(10,10,12,0.85);
+      backdrop-filter: blur(16px) saturate(1.4);
+      -webkit-backdrop-filter: blur(16px) saturate(1.4);
       transition: background 0.3s ease, border-color 0.3s ease;
-      border-bottom: 1px solid transparent;
+      border-bottom: 1px solid var(--border-subtle);
     }
     .navbar.is-stuck {
       background: rgba(10,10,12,0.85);
@@ -720,21 +722,151 @@
     /* ═══════════════════════════════════════════
        RESPONSIVE
        ═══════════════════════════════════════════ */
+    /* Tablet / small laptop */
     @media (max-width: 991.98px) {
       .feature-grid { grid-template-columns: repeat(2, 1fr); }
       .integration-grid { grid-template-columns: repeat(2, 1fr); }
+      /* Better spacing for collapsed nav links */
+      .navbar .nav-link { padding: 0.65rem 1rem !important; }
     }
+    /* Mobile */
     @media (max-width: 767.98px) {
       section { padding: 4rem 0; }
       .feature-grid { grid-template-columns: 1fr; }
       .tools-list { grid-template-columns: 1fr; }
       .integration-grid { grid-template-columns: 1fr; }
-      .step-flow { flex-direction: column; gap: 1.5rem; align-items: center; }
-      .step-item { max-width: 280px; }
+      .step-flow { flex-direction: column; gap: 1.75rem; align-items: center; }
+      .step-item { max-width: 300px; }
       .step-item:not(:last-child)::after { display: none; }
       .cta-box { padding: 2.5rem 1.5rem; }
       .hero h1 { font-size: 2.2rem; }
       .hero-stat-row { gap: 1.5rem; }
+
+      /* Hero touchups */
+      .hero p { font-size: 1rem; }
+      .hero-grid-bg {
+        mask-image: radial-gradient(ellipse 80% 50% at 50% 40%, black 20%, transparent 70%);
+        -webkit-mask-image: radial-gradient(ellipse 80% 50% at 50% 40%, black 20%, transparent 70%);
+      }
+      .hero-glow { width: 400px; height: 400px; }
+      .hero-terminal .term-body { font-size: 0.72rem; padding: 14px; }
+
+      /* Feature cards tighter padding */
+      .feature-card { padding: 1.75rem 1.5rem; }
+
+      /* Tool items touch-friendly */
+      .tool-item { padding: 1rem 1.25rem; gap: 12px; }
+      .tool-item .ti { width: 30px; height: 30px; font-size: 0.85rem; }
+
+      /* Code card smaller font */
+      .code-card .code-body { font-size: 0.72rem; padding: 1.25rem; }
+
+      /* Integration cards */
+      .integ-card { padding: 1rem; }
+      .integ-card .ii { width: 34px; height: 34px; font-size: 1rem; }
+
+      /* Section sub tighter */
+      .section-sub { font-size: 0.95rem; }
+    }
+    /* Extra-small mobile (320px — 575px) */
+    @media (max-width: 575.98px) {
+      /* ── Hero ── */
+      .hero { padding-top: 3.5rem; }
+      .hero h1 { font-size: 1.7rem; }
+      .hero p { font-size: 0.9rem; margin-bottom: 1.5rem; max-width: 100%; }
+      .hero-actions { flex-direction: column; }
+      .hero-actions .btn-primary-solid,
+      .hero-actions .btn-secondary-solid {
+        width: 100%;
+        justify-content: center;
+      }
+      .hero-stat-row { flex-direction: column; gap: 1rem; align-items: center; text-align: center; }
+      .hero-stat { text-align: center; }
+      .hero-label { font-size: 0.7rem; padding: 4px 10px 4px 8px; }
+      .hero-terminal .term-header { padding: 10px 12px; }
+      .hero-terminal .term-body { font-size: 0.62rem; padding: 10px; line-height: 1.55; }
+      .hero-glow { width: 280px; height: 280px; top: -10%; }
+      .hero-grid-bg {
+        background-size: 25px 25px;
+        mask-image: radial-gradient(ellipse 90% 50% at 50% 40%, black 20%, transparent 70%);
+        -webkit-mask-image: radial-gradient(ellipse 90% 50% at 50% 40%, black 20%, transparent 70%);
+      }
+
+      /* ── Navbar ── */
+      .navbar .navbar-toggler i { font-size: 1.6rem !important; }
+      .navbar .nav-link { padding: 0.75rem 1rem !important; font-size: 0.95rem; }
+      .navbar .btn-ghost { width: 100%; justify-content: center; padding: 0.6rem 1rem; }
+      .navbar-brand { font-size: 1rem; }
+      .navbar-brand .logo-mark { width: 24px; height: 24px; font-size: 0.75rem; }
+
+      /* ── Sections ── */
+      section { padding: 3rem 0; }
+      .section-heading { font-size: 1.35rem; }
+      .section-sub { font-size: 0.85rem; line-height: 1.55; }
+
+      /* ── Features ── */
+      .feature-card { padding: 1.25rem 1rem; }
+      .feature-card .icon { width: 34px; height: 34px; font-size: 0.95rem; margin-bottom: 0.9rem; }
+      .feature-card h4 { font-size: 0.9rem; }
+      .feature-card p { font-size: 0.8rem; }
+
+      /* ── Tools ── */
+      .tool-item { padding: 0.85rem 1rem; gap: 10px; }
+      .tool-item .ti { width: 26px; height: 26px; font-size: 0.72rem; }
+      .tool-item .ti-desc strong { font-size: 0.78rem; }
+      .tool-item .ti-desc span { font-size: 0.7rem; }
+
+      /* ── Code card & steps ── */
+      .code-card .code-body { font-size: 0.6rem; padding: 0.85rem; line-height: 1.5; }
+      .step-flow { gap: 1.5rem; }
+      .step-item { max-width: 100%; padding: 0 0.5rem; }
+      .step-num { width: 34px; height: 34px; font-size: 0.75rem; }
+      .step-item h5 { font-size: 0.85rem; }
+      .step-item p { font-size: 0.75rem; }
+
+      /* ── Integrations ── */
+      .integ-card { padding: 0.75rem 0.85rem; gap: 10px; }
+      .integ-card .ii { width: 28px; height: 28px; font-size: 0.8rem; }
+      .integ-card .ii-label strong { font-size: 0.78rem; }
+      .integ-card .ii-label span { font-size: 0.65rem; }
+
+      /* ── CTA ── */
+      .cta-box { padding: 1.75rem 1rem; }
+      .cta-box h2 { font-size: 1.3rem; }
+      .cta-box p { font-size: 0.85rem; }
+      .cta-actions { flex-direction: column; }
+      .cta-actions .btn-cta-primary,
+      .cta-actions .btn-cta-ghost {
+        width: 100%;
+        justify-content: center;
+      }
+
+      /* ── Shimmer — reduce animation complexity on mobile ── */
+      .shimmer-text { animation-duration: 6s; }
+
+      /* ── Footer ── */
+      footer { padding: 1.5rem 0; }
+      footer .brand { font-size: 0.85rem; }
+    }
+
+    /* Touch targets — 44px minimum for touch devices */
+    @media (hover: none) and (pointer: coarse) {
+      .navbar .nav-link,
+      .navbar .btn-ghost,
+      .navbar .navbar-toggler,
+      .btn-primary-solid,
+      .btn-secondary-solid,
+      .btn-cta-primary,
+      .btn-cta-ghost {
+        min-height: 44px;
+      }
+    }
+
+    /* ── Prevent double-tap zoom delay on interactive elements ── */
+    .nav-link, .navbar-toggler, .btn-ghost, .btn-primary-solid,
+    .btn-secondary-solid, .btn-cta-primary, .btn-cta-ghost,
+    .feature-card, .tool-item, .integ-card {
+      touch-action: manipulation;
     }
 
     /* ═══════════════════════════════════════════

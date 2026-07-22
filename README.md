@@ -482,6 +482,57 @@ args = ["-y", "@gida-concept/pm-agent-mcp-server"]
 
 
 ---
+## Automatic AI Awareness — Server Instructions
+
+PM Agent ships with a **server-level `instructions` field** (MCP spec) that gets auto-injected into your AI's system prompt on every request. This means:
+
+- **You don't need to remind the AI** to check context — it's baked into its instructions
+- **Every MCP-compatible client** that supports server instructions gets this automatically
+- **The AI proactively calls PM Agent tools** without you having to ask
+
+### What Happens Under the Hood
+
+When the PM Agent MCP server initializes (the `initialize` handshake), the instructions text is sent to the client. The client injects these instructions into the LLM's system prompt. The AI then follows them on every interaction — no manual prompting needed.
+
+### What the AI Is Told to Do
+
+The auto-injected instructions tell the AI to:
+
+1. **Before proposing changes** — call `pm_get_context` to check current project state (blockers, decisions, rules)
+2. **Before modifying scope** — call `pm_check_scope` to verify sprint capacity and risk
+3. **Check rules** — call `pm_enforce_rules` or `pm_get_decisions` before finalizing any change that could affect project direction
+4. **Log decisions** — after reaching significant agreement, call `pm_log_decision` to persist the rationale
+5. **Review notes** — call `pm_get_notes` to check recent observations before starting new work
+6. **Check blockers** — call `pm_get_blockers` before planning work that might conflict with blocked items
+
+### Client Support
+
+| Client | Supports Server Instructions? |
+|--------|------------------------------|
+| **Claude Code** | ✅ Yes (auto via MCP spec) |
+| **Cursor** | ✅ Yes |
+| **Zed** | ✅ Yes |
+| **OpenCode** | ✅ Yes |
+| **Codex CLI** | ✅ Yes |
+| **Most MCP clients (SDK v1.0+)** | ✅ Yes |
+
+### Fallback for Clients Without Support
+
+If your MCP client doesn't support server-level `instructions`, create a `CLAUDE.md` or `AGENTS.md` in your project root with:
+
+```markdown
+## Required PM Agent Behavior
+
+Before every response, you MUST:
+1. Call `pm_get_context` to check current project state
+2. Check `pm_get_blockers` before planning work
+3. Enforce active rules via `pm_enforce_rules` before finalizing decisions
+4. Log decisions via `pm_log_decision` after reaching agreements
+```
+
+Your AI will read these instructions and follow them.
+
+---
 
 ## MCP Tools Exposed
 
