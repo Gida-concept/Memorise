@@ -1,4 +1,4 @@
-import { loadConfig, openDb, closeDb, getDefaultDataDir, type PmAgentConfig } from '@pm-agent/core';
+import { loadConfig, openDb, closeDb, getDefaultDataDir, type PmAgentConfig } from '@gida-concept/pm-agent-core';
 import type Database from 'better-sqlite3';
 import path from 'path';
 

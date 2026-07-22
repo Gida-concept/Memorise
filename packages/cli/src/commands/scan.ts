@@ -1,5 +1,5 @@
-import { scan as fullScan, scanIncremental, verify } from '@pm-agent/core';
-import { loadConfig, openDb, getDefaultDataDir } from '@pm-agent/core';
+import { scan as fullScan, scanIncremental, verify } from '@gida-concept/pm-agent-core';
+import { loadConfig, openDb, getDefaultDataDir } from '@gida-concept/pm-agent-core';
 import { Colors, formatTable } from '../formatters.js';
 import { ExitCode } from '../exit-codes.js';
 import { PmCliError } from '../errors.js';

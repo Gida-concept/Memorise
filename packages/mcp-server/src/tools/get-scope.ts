@@ -1,4 +1,4 @@
-import { getLatestScope, getScopeHistory } from '@pm-agent/core';
+import { getLatestScope, getScopeHistory } from '@gida-concept/pm-agent-core';
 import { withDb } from './db-utils.js';
 
 export async function handleGetScope(args: Record<string, unknown>): Promise<Record<string, unknown>> {

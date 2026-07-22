@@ -1,4 +1,4 @@
-import { captureScope, getLatestScope } from '@pm-agent/core';
+import { captureScope, getLatestScope } from '@gida-concept/pm-agent-core';
 import { withDb } from './db-utils.js';
 import { handleRules, wrapEnforcementResult } from './rules-utils.js';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';

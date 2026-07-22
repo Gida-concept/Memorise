@@ -1,17 +1,17 @@
-# @pm-agent/mcp-server
+# @gida-concept/pm-agent-mcp-server
 
 > PM Agent MCP server — expose project memory, rules, and codebase intelligence to AI agents via the [Model Context Protocol](https://modelcontextprotocol.io).
 
 ## Installation
 
 ```bash
-npm install -g @pm-agent/mcp-server
+npm install -g @gida-concept/pm-agent-mcp-server
 ```
 
 Or run directly:
 
 ```bash
-npx pm-agent-mcp
+npx @gida-concept/pm-agent-mcp-server
 ```
 
 ## Overview
@@ -66,7 +66,7 @@ Add to your `CLAUDE.md`:
   "mcpServers": {
     "pm-agent": {
       "command": "npx",
-      "args": ["@pm-agent/mcp-server"]
+      "args": ["@gida-concept/pm-agent-mcp-server"]
     }
   }
 }
@@ -78,7 +78,7 @@ Add in Cursor settings → MCP Servers:
 
 - **Name:** `pm-agent`
 - **Type:** `command`
-- **Command:** `npx @pm-agent/mcp-server`
+- **Command:** `npx @gida-concept/pm-agent-mcp-server`
 
 ### VS Code
 
@@ -89,7 +89,7 @@ With the [MCP extension](https://marketplace.visualstudio.com/items?itemName=ms-
   "mcp.servers": {
     "pm-agent": {
       "command": "npx",
-      "args": ["@pm-agent/mcp-server"]
+      "args": ["@gida-concept/pm-agent-mcp-server"]
     }
   }
 }
@@ -104,7 +104,7 @@ Add to `~/.config/zed/settings.json`:
   "mcp": {
     "pm-agent": {
       "command": "npx",
-      "args": ["@pm-agent/mcp-server"]
+      "args": ["@gida-concept/pm-agent-mcp-server"]
     }
   }
 }

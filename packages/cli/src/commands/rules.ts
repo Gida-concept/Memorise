@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { loadRules, addRule, removeRule, toggleRule } from '@pm-agent/core';
+import { loadRules, addRule, removeRule, toggleRule } from '@gida-concept/pm-agent-core';
 import { getCommandContext, closeCommandContext, outputJson, shouldOutputJson } from '../db-utils.js';
 import { Colors, formatTable } from '../formatters.js';
 import { ExitCode } from '../exit-codes.js';

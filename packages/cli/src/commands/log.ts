@@ -1,4 +1,4 @@
-import { createDecision, loadRules, enforce } from '@pm-agent/core';
+import { createDecision, loadRules, enforce } from '@gida-concept/pm-agent-core';
 import { getCommandContext, closeCommandContext, outputJson, shouldOutputJson } from '../db-utils.js';
 import { Colors, formatCard } from '../formatters.js';
 import { ExitCode } from '../exit-codes.js';

@@ -1,4 +1,4 @@
-import { listDecisions, getBlockers, searchNotes, listTasks, getLatestScope } from '@pm-agent/core';
+import { listDecisions, getBlockers, searchNotes, listTasks, getLatestScope } from '@gida-concept/pm-agent-core';
 import { getCommandContext, closeCommandContext, outputJson, shouldOutputJson } from '../db-utils.js';
 import { Colors, formatCard } from '../formatters.js';
 

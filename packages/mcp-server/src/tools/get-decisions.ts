@@ -1,4 +1,4 @@
-import { listDecisions } from '@pm-agent/core';
+import { listDecisions } from '@gida-concept/pm-agent-core';
 import { withDb } from './db-utils.js';
 
 export async function handleGetDecisions(args: Record<string, unknown>): Promise<Record<string, unknown>> {

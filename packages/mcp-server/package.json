@@ -1,5 +1,5 @@
 {
-  "name": "@pm-agent/mcp-server",
+  "name": "@gida-concept/pm-agent-mcp-server",
   "version": "0.1.0",
   "description": "PM Agent MCP server — expose project memory and rules to AI agents",
   "publishConfig": {
@@ -24,7 +24,7 @@
     "dev": "tsup --watch"
   },
   "dependencies": {
-    "@pm-agent/core": "^0.1.0",
+    "@gida-concept/pm-agent-core": "^0.1.0",
     "@modelcontextprotocol/sdk": "^1.0.0"
   },
   "devDependencies": {

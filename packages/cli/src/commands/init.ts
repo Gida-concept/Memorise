@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import ora from 'ora';
-import { openDb, closeDb, detectIntegrations, DEFAULT_CONFIG_TOML, DEFAULT_RULES_TOML } from '@pm-agent/core';
-import type { PmAgentConfig } from '@pm-agent/core';
+import { openDb, closeDb, detectIntegrations, DEFAULT_CONFIG_TOML, DEFAULT_RULES_TOML } from '@gida-concept/pm-agent-core';
+import type { PmAgentConfig } from '@gida-concept/pm-agent-core';
 import { Colors } from '../formatters.js';
 import { ExitCode } from '../exit-codes.js';
 import { PmCliError } from '../errors.js';

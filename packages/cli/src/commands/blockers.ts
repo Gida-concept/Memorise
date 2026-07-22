@@ -1,4 +1,4 @@
-import { getBlockers, getActiveBlockers, resolveBlocker, getBlocker } from '@pm-agent/core';
+import { getBlockers, getActiveBlockers, resolveBlocker, getBlocker } from '@gida-concept/pm-agent-core';
 import { getCommandContext, closeCommandContext, outputJson, shouldOutputJson } from '../db-utils.js';
 import { Colors, formatTable } from '../formatters.js';
 import { ExitCode } from '../exit-codes.js';

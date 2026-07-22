@@ -1,4 +1,4 @@
-import { getBlockers, getActiveBlockers } from '@pm-agent/core';
+import { getBlockers, getActiveBlockers } from '@gida-concept/pm-agent-core';
 import { withDb } from './db-utils.js';
 
 export async function handleGetBlockers(args: Record<string, unknown>): Promise<Record<string, unknown>> {

@@ -1,4 +1,4 @@
-import { loadRules, enforce, loadConfig } from '@pm-agent/core';
+import { loadRules, enforce, loadConfig } from '@gida-concept/pm-agent-core';
 import { throwInputError, throwConfigError } from './db-utils.js';
 
 export async function handleEnforceRules(args: Record<string, unknown>): Promise<Record<string, unknown>> {

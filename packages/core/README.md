@@ -1,15 +1,15 @@
-# @pm-agent/core
+# @gida-concept/pm-agent-core
 
 > PM Agent core library — memory layer, rules engine, and codebase intelligence.
 
 ## Overview
 
-`@pm-agent/core` is the backbone of PM Agent. It provides the SQLite-backed memory layer (decisions, blockers, notes, tasks, scope snapshots), the TOML-configured rules engine with expression parsing, the codebase scanner and impact analyzer, and GitHub/Linear integrations.
+`@gida-concept/pm-agent-core` is the backbone of PM Agent. It provides the SQLite-backed memory layer (decisions, blockers, notes, tasks, scope snapshots), the TOML-configured rules engine with expression parsing, the codebase scanner and impact analyzer, and GitHub/Linear integrations.
 
 ## Installation
 
 ```bash
-npm install @pm-agent/core
+npm install @gida-concept/pm-agent-core
 ```
 
 ## Key Interfaces
@@ -30,7 +30,7 @@ npm install @pm-agent/core
 The rules engine evaluates TOML-defined rules against context objects:
 
 ```typescript
-import { loadRules, enforce } from '@pm-agent/core';
+import { loadRules, enforce } from '@gida-concept/pm-agent-core';
 
 const rules = loadRules('/path/to/rules.toml');
 const result = enforce('pm', rules, {
@@ -58,7 +58,7 @@ Safe expression evaluation with no `eval()`/`new Function()`:
 ### Scanner
 
 ```typescript
-import { scan } from '@pm-agent/core';
+import { scan } from '@gida-concept/pm-agent-core';
 const result = await scan({
   rootDir: '/path/to/project',
   db: database,
@@ -69,7 +69,7 @@ const result = await scan({
 ### Shipped Defaults
 
 ```typescript
-import { DEFAULT_CONFIG_TOML, DEFAULT_RULES_TOML } from '@pm-agent/core';
+import { DEFAULT_CONFIG_TOML, DEFAULT_RULES_TOML } from '@gida-concept/pm-agent-core';
 
 // Preconfigured defaults with 5 built-in rules:
 // - decision-before-close (hard)

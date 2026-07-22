@@ -1,5 +1,5 @@
 import { withDb } from './db-utils.js';
-import { listDecisions, getActiveBlockers, searchNotes, listTasks, getLatestScope } from '@pm-agent/core';
+import { listDecisions, getActiveBlockers, searchNotes, listTasks, getLatestScope } from '@gida-concept/pm-agent-core';
 
 export async function handleGetContext(_args: Record<string, unknown>): Promise<Record<string, unknown>> {
   return withDb((db, config) => {

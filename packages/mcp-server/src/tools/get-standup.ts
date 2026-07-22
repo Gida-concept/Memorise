@@ -1,4 +1,4 @@
-import { getStandupData } from '@pm-agent/core';
+import { getStandupData } from '@gida-concept/pm-agent-core';
 import { withDb } from './db-utils.js';
 
 export async function handleGetStandup(args: Record<string, unknown>): Promise<Record<string, unknown>> {

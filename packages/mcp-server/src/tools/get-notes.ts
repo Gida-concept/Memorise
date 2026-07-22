@@ -1,4 +1,4 @@
-import { searchNotes } from '@pm-agent/core';
+import { searchNotes } from '@gida-concept/pm-agent-core';
 import { withDb } from './db-utils.js';
 
 export async function handleGetNotes(args: Record<string, unknown>): Promise<Record<string, unknown>> {

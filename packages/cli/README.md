@@ -1,17 +1,17 @@
-# @pm-agent/cli
+# @gida-concept/pm-agent-cli
 
 > PM Agent CLI — terminal interface for project memory and rules enforcement.
 
 ## Installation
 
 ```bash
-npm install -g @pm-agent/cli
+npm install -g @gida-concept/pm-agent-cli
 ```
 
 Or run directly:
 
 ```bash
-npx pm-agent
+npx @gida-concept/pm-agent-cli
 ```
 
 ## Usage

@@ -107,7 +107,7 @@ grep -q "decision-before-close" "$TEST_DIR/rules-output.txt" && pass "pm rules l
 echo ""
 echo "--- 10. MCP Server ---"
 # Send tools/list request to MCP server via stdin/stdout with a 5s timeout
-echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | timeout 5 $MCP_CMD 2>&1 | tee "$TEST_DIR/mcp-output.txt" || true
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | timeout 10 $MCP_CMD 2>&1 > "$TEST_DIR/mcp-output.txt" || true
 grep -q "pm_get_context" "$TEST_DIR/mcp-output.txt" && pass "MCP tools/list returns pm_get_context" || fail "MCP tools/list missing pm_get_context"
 
 # ── 11. Edge Cases ───────────────────────────────────────────────

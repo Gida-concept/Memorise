@@ -1,4 +1,4 @@
-import { loadConfig, openDb, closeDb, getDefaultDataDir, getTransitiveDependencies } from '@pm-agent/core';
+import { loadConfig, openDb, closeDb, getDefaultDataDir, getTransitiveDependencies } from '@gida-concept/pm-agent-core';
 import { throwInputError, throwConfigError } from './db-utils.js';
 import path from 'path';
 

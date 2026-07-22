@@ -1,5 +1,5 @@
 import { withDb } from './db-utils.js';
-import { getActiveBlockers, listDecisions, listTasks, getLatestScope } from '@pm-agent/core';
+import { getActiveBlockers, listDecisions, listTasks, getLatestScope } from '@gida-concept/pm-agent-core';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 
 export async function handlePrepMeeting(args: Record<string, unknown>): Promise<Record<string, unknown>> {

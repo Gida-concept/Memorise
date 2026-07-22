@@ -1,6 +1,37 @@
-# PM Agent — The Memory & Rules Layer for AI-Native Product Management
+```
+                           ╭──────────────────────╮
+                           │     PM AGENT         │
+                           │  memory · rules · mcp │
+                           ╰──────────┬───────────╯
+                                      │
+        ┌─────────────┬───────────────┼───────────────┬─────────────┐
+        │             │               │               │             │
+    ╭───┴───╮    ╭───┴───╮       ╭───┴───╮       ╭───┴───╮    ╭───┴───╮
+    │  CLI  │    │  IDE  │       │  MCP  │       │ HOOK  │    │  WEB  │
+    ╰───┬───╯    ╰───┬───╯       ╰───┬───╯       ╰───┬───╯    ╰───┬───╯
+        │             │               │               │             │
+        └────────┬────┘               │               └──────┬──────┘
+                 │                    │                      │
+         ╔═══════╧════════════════════╧══════════════════════╧═══════╗
+         ║                     RULES ENGINE                         ║
+         ║           trigger → condition → action                  ║
+         ╚═══════════════════════════════════════════════════════════╝
+                                  │
+         ┌────────────────────────┼────────────────────────────┐
+         │                        │                            │
+    ═════╧════════════════════════╧════════════════════════════╧═════
+        🐙     PM AGENT   —   8  T E N T A C L E S ,  0  B . S .
 
-> A context-aware memory and rules engine that lives in your terminal, IDE, and desktop. It doesn't think — it **remembers, directs, and enforces** so your AI can stay focused on execution.
+                    🐙  ~  ~  ~  ~  ~  ~  ~  ~  ~  ~  ~  🐙
+              🐙  GitHub  ·  Linear  ·  Slack  ·  Terminal  ·  IDE  🐙
+           Notion  ·  Jira  ·  Figma  ·  Filesystem  ·  Calendar  🐙
+                    🐙  ~  ~  ~  ~  ~  ~  ~  ~  ~  ~  ~  🐙
+
+```
+
+# PM Agent 🐙 — Memory & Rules for AI-Native Product Management
+
+> A context-aware memory layer and rules engine that lives in your terminal, IDE, and desktop. It doesn't think — it **remembers, directs, and enforces** so your AI can stay focused on execution.
 
 ---
 
@@ -136,30 +167,44 @@ Your AI asks. PM Agent answers. No hallucination, no stale context.
 
 ### Installation
 
+**Via npm (recommended after publish):**
+
 ```bash
-# npm (global install)
-npm install -g pm-agent
+# Install the CLI globally
+npm install -g @gida-concept/pm-agent-cli
 
-# Or use npx (no install)
-npx pm-agent init
+# Then `pm` is available anywhere
+pm --help
+```
 
-# From source
-git clone https://github.com/pm-agent/pm-agent.git
-cd pm-agent
+**Via npx (no install):**
+
+```bash
+# Run directly without installing
+npx @gida-concept/pm-agent-cli init
+```
+
+**From source (development):**
+
+```bash
+git clone https://github.com/Gida-concept/Memorise.git
+cd Memorise
 npm install
 npm run build
 npm link
+
+# Now `pm` is available anywhere
+pm --help
 ```
 
-### Initialize
+### Initialize in Your Project
 
 ```bash
-$ cd ~/projects/auth-service
+$ cd ~/projects/my-app
 $ pm init
-→ Detected GitHub repo: acme-corp/auth-service
-→ Found Linear workspace: ACME
-→ Connected Slack workspace: acme.slack.com
-→ Project graph built: 47 tickets, 12 open PRs, 3 pending decisions, 2 active rules
+→ Created: /home/you/.config/pm-agent/config.toml
+→ Created: /home/you/.config/pm-agent/rules.toml
+→ Project graph ready in SQLite
 ```
 
 ### Daily Usage
@@ -240,6 +285,34 @@ $ pm scan --watch
 PM Agent is **not** an AI. It uses **your** AI. Here's how:
 
 ### Claude Code
+
+First, connect PM Agent's MCP server to Claude Code by adding to your `~/.claude/claude.json`:
+
+```json
+{
+  "mcpServers": {
+    "pm-agent": {
+      "command": "node",
+      "args": ["/path/to/Memorise/packages/mcp-server/dist/index.js"]
+    }
+  }
+}
+```
+
+Or once published to npm:
+
+```json
+{
+  "mcpServers": {
+    "pm-agent": {
+      "command": "npx",
+      "args": ["@gida-concept/pm-agent-mcp-server"]
+    }
+  }
+}
+```
+
+Then:
 
 ```bash
 $ claude
@@ -698,7 +771,7 @@ encrypt = true
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) — or just open an issue or PR on [GitHub](https://github.com/Gida-concept/Memorise).
 
 ---
 

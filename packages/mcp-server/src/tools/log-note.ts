@@ -1,4 +1,4 @@
-import { createNote } from '@pm-agent/core';
+import { createNote } from '@gida-concept/pm-agent-core';
 import { withDb } from './db-utils.js';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 

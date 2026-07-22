@@ -1,4 +1,4 @@
-import { createNote } from '@pm-agent/core';
+import { createNote } from '@gida-concept/pm-agent-core';
 import { getCommandContext, closeCommandContext, outputJson, shouldOutputJson } from '../db-utils.js';
 import { Colors, formatCard } from '../formatters.js';
 

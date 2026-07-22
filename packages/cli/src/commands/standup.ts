@@ -1,4 +1,4 @@
-import { getStandupData } from '@pm-agent/core';
+import { getStandupData } from '@gida-concept/pm-agent-core';
 import { getCommandContext, closeCommandContext, outputJson, shouldOutputJson } from '../db-utils.js';
 import { Colors } from '../formatters.js';
 

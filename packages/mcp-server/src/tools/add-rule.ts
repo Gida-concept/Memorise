@@ -1,4 +1,4 @@
-import { loadConfig, addRule } from '@pm-agent/core';
+import { loadConfig, addRule } from '@gida-concept/pm-agent-core';
 import { throwInputError, throwConfigError } from './db-utils.js';
 
 export async function handleAddRule(args: Record<string, unknown>): Promise<Record<string, unknown>> {

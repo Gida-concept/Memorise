@@ -1,4 +1,4 @@
-import { analyzeImpact, loadConfig, openDb, closeDb, getDefaultDataDir } from '@pm-agent/core';
+import { analyzeImpact, loadConfig, openDb, closeDb, getDefaultDataDir } from '@gida-concept/pm-agent-core';
 import { throwInputError, throwConfigError } from './db-utils.js';
 import path from 'path';
 

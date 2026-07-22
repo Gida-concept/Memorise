@@ -20,8 +20,8 @@
     "outDir": "./dist",
     "baseUrl": ".",
     "paths": {
-      "@pm-agent/core": ["./packages/core/src"],
-      "@pm-agent/core/*": ["./packages/core/src/*"]
+      "@gida-concept/pm-agent-core": ["./packages/core/src"],
+      "@gida-concept/pm-agent-core/*": ["./packages/core/src/*"]
     }
   },
   "include": ["packages/*/src/**/*.ts", "packages/*/tests/**/*.ts"],

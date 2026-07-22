@@ -1,5 +1,5 @@
-import { loadConfig, openDb, closeDb, getDefaultDataDir } from '@pm-agent/core';
-import { scan, scanIncremental, verify } from '@pm-agent/core';
+import { loadConfig, openDb, closeDb, getDefaultDataDir } from '@gida-concept/pm-agent-core';
+import { scan, scanIncremental, verify } from '@gida-concept/pm-agent-core';
 import { throwConfigError } from './db-utils.js';
 import path from 'path';
 

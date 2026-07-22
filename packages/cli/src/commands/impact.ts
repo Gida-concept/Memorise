@@ -1,4 +1,4 @@
-import { analyzeImpact } from '@pm-agent/core';
+import { analyzeImpact } from '@gida-concept/pm-agent-core';
 import { getCommandContext, closeCommandContext, outputJson, shouldOutputJson } from '../db-utils.js';
 import { Colors } from '../formatters.js';
 

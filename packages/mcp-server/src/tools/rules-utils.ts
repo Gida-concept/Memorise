@@ -1,5 +1,5 @@
-import { loadRules, enforce, type EnforcementResult, type Rule } from '@pm-agent/core';
-import type { PmAgentConfig } from '@pm-agent/core';
+import { loadRules, enforce, type EnforcementResult, type Rule } from '@gida-concept/pm-agent-core';
+import type { PmAgentConfig } from '@gida-concept/pm-agent-core';
 
 export function handleRules(config: PmAgentConfig, scope: 'pm' | 'code', context: Record<string, unknown>): EnforcementResult | null {
   const rulesPath = config.rules?.config_path;
