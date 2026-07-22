@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "pm-agent": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@gida-concept/pm-agent-mcp-server"]
+    }
+  }
+}

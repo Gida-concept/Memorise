@@ -282,35 +282,51 @@ $ pm scan --watch
 
 ## Integration with Your AI
 
-PM Agent is **not** an AI. It uses **your** AI. Here's how:
+PM Agent is **not** an AI. It uses **your** AI via the **Model Context Protocol (MCP)** — a standard way for AI assistants to interact with tools.
+
+When you configure PM Agent as an MCP server, your AI assistant (Claude Code, Cursor, etc.) can:
+- Query project state (blockers, decisions, tasks) inline while you code
+- Log decisions and enforce rules before you commit
+- Surface blockers, sprint risks, and pending decisions in your workflow
+
+> **No external API keys or environment variables needed.** The PM Agent MCP server uses `stdio` transport — it runs locally as a child process and reads your project files directly from disk.
+
+---
+
+### Quick Start (All CLIs)
+
+1. **Install Node.js** (v18+) if you don't have it.
+2. Pick your AI tool below and add the config shown.
+3. **Restart** the tool (config is only read at startup).
+4. **Verify** by asking your AI about blockers or decisions — it should call PM Agent automatically.
+
+The correct command is always this npx invocation:
+
+```
+npx -y @gida-concept/pm-agent-mcp-server
+```
+
+The `-y` flag tells npx to skip the "install this package?" prompt so the AI tool can start the server automatically.
+
+---
 
 ### Claude Code
 
-First, connect PM Agent's MCP server to Claude Code by adding to your `~/.claude/claude.json`:
+**Config file:** Create `./.mcp.json` in your project root:
 
 ```json
 {
   "mcpServers": {
     "pm-agent": {
-      "command": "node",
-      "args": ["/path/to/Memorise/packages/mcp-server/dist/index.js"]
-    }
-  }
-}
-```
-
-Or once published to npm:
-
-```json
-{
-  "mcpServers": {
-    "pm-agent": {
+      "type": "stdio",
       "command": "npx",
-      "args": ["@gida-concept/pm-agent-mcp-server"]
+      "args": ["-y", "@gida-concept/pm-agent-mcp-server"]
     }
   }
 }
 ```
+
+Alternatively, add the same object to your user-level config at `~/.claude.json` under `mcpServers`.
 
 Then:
 
@@ -332,23 +348,137 @@ $ claude
       Sprint has 4 days left. Risk: HIGH. Confirm?"
 ```
 
-### OpenCode
+**Verify:** Restart Claude Code, then run `/mcp` — you should see `pm-agent` in the connected servers list.
 
-```bash
-$ opencode
-> @pm get blockers
-> @pm draft standup update
-> @pm prep for stakeholder meeting at 2pm
-> @pm what decisions are pending?
+---
+
+### Cursor
+
+**Config file:** Create `.cursor/mcp.json` in your project root (or `~/.cursor/mcp.json` globally):
+
+```json
+{
+  "mcpServers": {
+    "pm-agent": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@gida-concept/pm-agent-mcp-server"]
+    }
+  }
+}
 ```
 
-### Cursor / VS Code / Zed
+**Verify:** Restart Cursor. Open the MCP panel (gear icon → Features → MCP) — `pm-agent` should show as connected. Then try asking Cursor's AI: *"What are my current blockers?"*
 
-PM Agent appears as an **MCP server** in your IDE. Your AI assistant can:
+> **Note:** Cursor v0.45+ reads `.cursor/mcp.json` automatically. Older versions may need the config in `~/.cursor/mcp.json` or in VS Code-style `settings.json` under `mcp.servers`.
 
-- Query project state inline while you code
-- Enforce rules before you commit (e.g., "log decision before closing related ticket")
-- Surface blockers in the sidebar
+---
+
+### OpenCode
+
+**Config file:** Create `opencode.json` (or `opencode.jsonc`) in your project root:
+
+```jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "pm-agent": {
+      "type": "local",
+      "command": ["npx", "-y", "@gida-concept/pm-agent-mcp-server"],
+      "enabled": true
+    }
+  }
+}
+```
+
+**Verify:** Restart OpenCode and ask: *"Show my current project context."* The AI should call the PM Agent tools automatically.
+
+---
+
+### Continue.dev
+
+**Config file:** Add to `~/.continue/config.json` (or `.continue/config.yaml` in your project):
+
+```json
+{
+  "mcpServers": [
+    {
+      "name": "pm-agent",
+      "command": "npx",
+      "args": ["-y", "@gida-concept/pm-agent-mcp-server"]
+    }
+  ]
+}
+```
+
+> Note: Continue.dev uses an **array** (not an object) for `mcpServers`. Each server is a list item with a `name` field.
+
+In YAML format (`config.yaml`):
+
+```yaml
+mcpServers:
+  - name: pm-agent
+    command: npx
+    args:
+      - "-y"
+      - "@gida-concept/pm-agent-mcp-server"
+```
+
+**Verify:** Open Continue, start a new chat, and ask: *"What decisions are pending?"*
+
+---
+
+### Zed
+
+**Config file:** Add to `~/.config/zed/settings.json`:
+
+```json
+{
+  "mcp_servers": {
+    "pm-agent": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@gida-concept/pm-agent-mcp-server"]
+    }
+  }
+}
+```
+
+> Note: Zed uses **snake_case** (`mcp_servers`, not `mcpServers`).
+
+**Verify:** Restart Zed. Open the Assistant panel — the PM Agent tools should be available to the AI.
+
+---
+
+### OpenAI Codex CLI
+
+**Config file:** Create `codexrc.toml` or add to `config.toml` in your project:
+
+```toml
+[mcp_servers.pm-agent]
+enabled = true
+
+[mcp_servers.pm-agent.transport]
+type = "stdio"
+command = "npx"
+args = ["-y", "@gida-concept/pm-agent-mcp-server"]
+```
+
+**Verify:** Restart Codex and ask: *"What blockers do I have?"*
+
+> **Note:** Codex CLI uses TOML format. The exact schema may evolve — if this exact structure doesn't work, check the [Codex CLI docs](https://github.com/openai/codex) for the latest `[mcp_servers]` configuration reference.
+
+---
+
+### General Tips
+
+| Tip | Details |
+|-----|---------|
+| **Restart required** | Config is only read when the tool starts. Always restart after editing config files. |
+| **One server, many tools** | PM Agent exposes 17+ tools. Your AI picks the right one — you don't need to configure individual tools. |
+| **No env vars needed** | The server runs locally and reads your project files directly. |
+| **Project vs user scope** | Project-level config (`.mcp.json`, `.cursor/mcp.json`) is portable with your repo. User-level config (`~/.claude.json`, `~/.config/zed/settings.json`) applies across all projects. |
+| **Stuck?** | Run `npx -y @gida-concept/pm-agent-mcp-server` directly in your terminal. If it errors, check Node.js is v18+. If it starts without error, the package works — the issue is in your config file path or restart step. |
 
 
 ---
