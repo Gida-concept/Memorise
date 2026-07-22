@@ -28,10 +28,13 @@
       --text-tertiary: #71717a;
       --text-muted: #52525b;
 
-      --accent: #6366f1;
-      --accent-hover: #818cf8;
-      --accent-muted: rgba(99,102,241,0.12);
-      --accent-glow: rgba(99,102,241,0.25);
+      --accent: #ea580c;
+      --accent-hover: #f97316;
+      --accent-muted: rgba(234,88,12,0.12);
+      --accent-glow: rgba(234,88,12,0.25);
+
+      --blue: #3b82f6;
+      --blue-muted: rgba(59,130,246,0.1);
 
       --accent-green: #22c55e;
       --accent-amber: #f59e0b;
@@ -86,7 +89,7 @@
       letter-spacing: 0.02em;
       background: var(--accent-muted);
       color: var(--accent-hover);
-      border: 1px solid rgba(99,102,241,0.2);
+      border: 1px solid rgba(234,88,12,0.2);
     }
     .tag i { font-size: 0.65rem; color: var(--accent-green); }
 
@@ -137,7 +140,7 @@
       width: 28px;
       height: 28px;
       border-radius: 8px;
-      background: linear-gradient(135deg, var(--accent) 0%, #818cf8 100%);
+      background: linear-gradient(135deg, var(--accent) 0%, #60a5fa 100%);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -178,8 +181,8 @@
       inset: 0;
       pointer-events: none;
       background-image:
-        linear-gradient(rgba(99,102,241,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(99,102,241,0.03) 1px, transparent 1px);
+        linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
       background-size: 40px 40px;
       mask-image: radial-gradient(ellipse 60% 50% at 50% 40%, black 20%, transparent 70%);
       -webkit-mask-image: radial-gradient(ellipse 60% 50% at 50% 40%, black 20%, transparent 70%);
@@ -191,7 +194,7 @@
       transform: translateX(-50%);
       width: 700px;
       height: 700px;
-      background: radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 60%);
+      background: radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 60%);
       pointer-events: none;
     }
     .hero-label {
@@ -221,7 +224,7 @@
       margin-bottom: 1.2rem;
     }
     .hero h1 .accent {
-      background: linear-gradient(135deg, var(--accent) 0%, #a78bfa 60%, #e879f9 100%);
+      background: linear-gradient(135deg, var(--accent) 0%, #3b82f6 60%, #60a5fa 100%);
       -webkit-background-clip: text;
       background-clip: text;
       -webkit-text-fill-color: transparent;
@@ -251,12 +254,12 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      box-shadow: 0 1px 0 rgba(255,255,255,0.1) inset, 0 2px 8px rgba(99,102,241,0.3);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.1) inset, 0 2px 8px rgba(234,88,12,0.3);
     }
     .btn-primary-solid:hover {
       background: var(--accent-hover);
       transform: translateY(-1px);
-      box-shadow: 0 1px 0 rgba(255,255,255,0.1) inset, 0 6px 20px rgba(99,102,241,0.35);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.1) inset, 0 6px 20px rgba(234,88,12,0.35);
       color: #fff;
     }
     .btn-secondary-solid {
@@ -361,7 +364,7 @@
       background: var(--accent-muted);
       color: var(--accent);
       margin-bottom: 1rem;
-      border: 1px solid rgba(99,102,241,0.15);
+      border: 1px solid rgba(234,88,12,0.15);
     }
     .section-heading {
       font-size: clamp(1.8rem, 3vw, 2.5rem);
@@ -451,7 +454,7 @@
       overflow-x: auto;
     }
     .code-card .code-body .comment { color: #52525b; font-style: italic; }
-    .code-card .code-body .key { color: #818cf8; }
+    .code-card .code-body .key { color: #60a5fa; }
     .code-card .code-body .string { color: #fbbf24; }
     .code-card .code-body .punctuation { color: #a1a1aa; }
     .code-card .code-body .function { color: #34d399; }
@@ -489,7 +492,7 @@
       margin: 0 auto 0.8rem;
       background: var(--accent-muted);
       color: var(--accent);
-      border: 1px solid rgba(99,102,241,0.2);
+      border: 1px solid rgba(234,88,12,0.2);
     }
     .step-item h5 {
       font-size: 0.95rem;
@@ -534,7 +537,7 @@
       justify-content: center;
       font-size: 0.95rem;
       flex-shrink: 0;
-      background: rgba(99,102,241,0.08);
+      background: rgba(234,88,12,0.08);
       color: var(--accent);
     }
     .tool-item .ti-desc strong {
@@ -601,8 +604,8 @@
       padding: 0;
     }
     .cta-box {
-      background: linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(168,85,247,0.05) 100%);
-      border: 1px solid rgba(99,102,241,0.15);
+      background: linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(234,88,12,0.05) 100%);
+      border: 1px solid rgba(59,130,246,0.15);
       border-radius: var(--radius-xl);
       padding: 4rem 3rem;
       text-align: center;
@@ -617,7 +620,7 @@
       transform: translateX(-50%);
       width: 500px;
       height: 500px;
-      background: radial-gradient(circle, rgba(99,102,241,0.06) 0%, transparent 60%);
+      background: radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 60%);
       pointer-events: none;
     }
     .cta-box h2 {
@@ -651,12 +654,12 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      box-shadow: 0 2px 10px rgba(99,102,241,0.3);
+      box-shadow: 0 2px 10px rgba(234,88,12,0.3);
     }
     .btn-cta-primary:hover {
       background: var(--accent-hover);
       transform: translateY(-1px);
-      box-shadow: 0 8px 25px rgba(99,102,241,0.35);
+      box-shadow: 0 8px 25px rgba(234,88,12,0.35);
       color: #fff;
     }
     .btn-cta-ghost {
@@ -695,7 +698,7 @@
       width: 24px;
       height: 24px;
       border-radius: 6px;
-      background: linear-gradient(135deg, var(--accent) 0%, #818cf8 100%);
+      background: linear-gradient(135deg, var(--accent) 0%, #60a5fa 100%);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -743,7 +746,7 @@
       100% { background-position: 0% 50%; }
     }
     .shimmer-text {
-      background: linear-gradient(135deg, var(--accent) 0%, #a78bfa 30%, #e879f9 60%, var(--accent) 100%);
+      background: linear-gradient(135deg, var(--accent) 0%, #3b82f6 30%, #60a5fa 60%, var(--accent) 100%);
       background-size: 200% auto;
       -webkit-background-clip: text;
       background-clip: text;
