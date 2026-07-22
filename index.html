@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PM Agent — AI-Powered Project Management for Your Coding AI</title>
+  <meta name="description" content="PM Agent gives your AI coding assistant superpowers: track decisions, surface blockers, enforce rules, and scan scope — all through MCP." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>" />
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-dark: #3730a3;
+      --accent: #06b6d4;
+      --gradient-1: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%);
+      --gradient-2: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      --gradient-hero: linear-gradient(160deg, #0a0a1a 0%, #1a1040 40%, #0d1b2a 100%);
+      --glass-bg: rgba(255, 255, 255, 0.05);
+      --glass-border: rgba(255, 255, 255, 0.1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0a0a0f;
+      color: #e2e8f0;
+      overflow-x: hidden;
+    }
+
+    code, pre { font-family: 'JetBrains Mono', monospace; }
+
+    /* ── Navbar ── */
+    .navbar {
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      background: rgba(10, 10, 15, 0.8);
+      border-bottom: 1px solid transparent;
+      transition: all 0.4s ease;
+      padding: 0.75rem 0;
+    }
+    .navbar.scrolled {
+      background: rgba(10, 10, 15, 0.95);
+      border-bottom-color: rgba(255,255,255,0.06);
+      box-shadow: 0 4px 30px rgba(0,0,0,0.3);
+    }
+    .navbar-brand {
+      font-weight: 800;
+      font-size: 1.4rem;
+      background: var(--gradient-1);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px;
+    }
+    .navbar-brand i { -webkit-text-fill-color: initial; color: #a855f7; margin-right: 6px; }
+    .nav-link {
+      font-weight: 500;
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.7) !important;
+      transition: color 0.3s;
+      padding: 0.5rem 1rem !important;
+    }
+    .nav-link:hover { color: #fff !important; }
+    .btn-github-nav {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #fff;
+      border-radius: 8px;
+      padding: 0.5rem 1.2rem;
+      font-weight: 600;
+      font-size: 0.85rem;
+      transition: all 0.3s;
+    }
+    .btn-github-nav:hover {
+      background: rgba(255,255,255,0.2);
+      color: #fff;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      min-height: 100vh;
+      background: var(--gradient-hero);
+      position: relative;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      padding-top: 80px;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 800px;
+      height: 800px;
+      background: radial-gradient(circle, rgba(79,70,229,0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: -30%;
+      left: -10%;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(6,182,212,0.1) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      border-radius: 100px;
+      background: rgba(79,70,229,0.15);
+      border: 1px solid rgba(79,70,229,0.3);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #a5b4fc;
+      margin-bottom: 1.5rem;
+    }
+    .hero-badge i { font-size: 0.75rem; color: #22c55e; }
+    .hero h1 {
+      font-size: clamp(2.5rem, 5vw, 4rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -1.5px;
+      margin-bottom: 1.2rem;
+    }
+    .hero h1 .gradient-text {
+      background: var(--gradient-1);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero p {
+      font-size: 1.15rem;
+      color: rgba(255,255,255,0.6);
+      max-width: 540px;
+      line-height: 1.7;
+      margin-bottom: 2rem;
+    }
+    .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+    .btn-primary-gradient {
+      background: var(--gradient-1);
+      border: none;
+      color: #fff;
+      padding: 0.85rem 2rem;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 1rem;
+      transition: all 0.3s;
+      box-shadow: 0 4px 20px rgba(79,70,229,0.4);
+    }
+    .btn-primary-gradient:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(79,70,229,0.5);
+      color: #fff;
+    }
+    .btn-outline-hero {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      padding: 0.85rem 2rem;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: all 0.3s;
+    }
+    .btn-outline-hero:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.4);
+      color: #fff;
+    }
+
+    /* Hero Mockup */
+    .hero-mockup {
+      position: relative;
+      perspective: 1000px;
+    }
+    .hero-mockup-img {
+      width: 100%;
+      max-width: 600px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.1);
+      box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+      transform: rotateY(-5deg) rotateX(2deg);
+      transition: transform 0.6s ease;
+    }
+    .hero-mockup-img:hover { transform: rotateY(0deg) rotateX(0deg); }
+    .hero-stats {
+      display: flex;
+      gap: 2.5rem;
+      margin-top: 2.5rem;
+      padding-top: 2rem;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .hero-stat h3 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      background: var(--gradient-1);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0;
+      line-height: 1;
+    }
+    .hero-stat p {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 0;
+      margin-top: 4px;
+    }
+
+    /* ── Section headers ── */
+    .section-header {
+      text-align: center;
+      margin-bottom: 3.5rem;
+    }
+    .section-header h2 {
+      font-size: clamp(1.8rem, 3vw, 2.5rem);
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 0.8rem;
+    }
+    .section-header p {
+      font-size: 1.05rem;
+      color: rgba(255,255,255,0.5);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .section-tag {
+      display: inline-block;
+      padding: 4px 14px;
+      border-radius: 100px;
+      background: rgba(79,70,229,0.12);
+      border: 1px solid rgba(79,70,229,0.2);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #a5b4fc;
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* ── Features ── */
+    #features {
+      background: #0d0d1a;
+      padding: 100px 0;
+      position: relative;
+    }
+    .feature-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+      padding: 2rem 1.5rem;
+      transition: all 0.4s ease;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--gradient-1);
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+    .feature-card:hover::before { opacity: 1; }
+    .feature-card:hover {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.12);
+      transform: translateY(-4px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .feature-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      margin-bottom: 1.25rem;
+      background: rgba(79,70,229,0.15);
+      color: #a5b4fc;
+      transition: all 0.4s;
+    }
+    .feature-card:hover .feature-icon {
+      background: var(--gradient-1);
+      color: #fff;
+    }
+    .feature-card h5 {
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin-bottom: 0.6rem;
+    }
+    .feature-card p {
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 0;
+      line-height: 1.6;
+    }
+
+    /* ── Tools ── */
+    #tools {
+      padding: 100px 0;
+      background: #0a0a0f;
+    }
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+    }
+    .tool-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 1rem 1.25rem;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px;
+      transition: all 0.3s;
+    }
+    .tool-item:hover {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.12);
+    }
+    .tool-item-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+      background: rgba(79,70,229,0.12);
+      color: #a5b4fc;
+    }
+    .tool-item-info { min-width: 0; }
+    .tool-item-info strong {
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .tool-item-info span {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.4);
+    }
+
+    /* ── How It Works ── */
+    #how-it-works {
+      padding: 100px 0;
+      background: #0d0d1a;
+      position: relative;
+    }
+    .step-card {
+      text-align: center;
+      padding: 2rem 1.5rem;
+      position: relative;
+    }
+    .step-number {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      font-weight: 800;
+      margin: 0 auto 1.25rem;
+      background: var(--gradient-1);
+      color: #fff;
+      box-shadow: 0 8px 30px rgba(79,70,229,0.3);
+      position: relative;
+      z-index: 2;
+    }
+    .step-card h5 {
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+    }
+    .step-card p {
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 0;
+    }
+    .step-connector {
+      display: none;
+    }
+    @media (min-width: 768px) {
+      .step-connector {
+        display: block;
+        position: absolute;
+        top: 50px;
+        left: 60%;
+        right: -20%;
+        height: 2px;
+        background: linear-gradient(90deg, rgba(79,70,229,0.4), transparent);
+        z-index: 1;
+      }
+    }
+
+    /* ── Integrations ── */
+    #integrations {
+      padding: 100px 0;
+      background: #0a0a0f;
+    }
+    .integration-card {
+      text-align: center;
+      padding: 2rem 1rem;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+      transition: all 0.3s;
+      height: 100%;
+    }
+    .integration-card:hover {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.12);
+      transform: translateY(-3px);
+    }
+    .integration-card .icon-wrap {
+      font-size: 2.5rem;
+      margin-bottom: 0.75rem;
+      color: #a5b4fc;
+    }
+    .integration-card h6 {
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 0.25rem;
+    }
+    .integration-card span {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.4);
+    }
+
+    /* ── CTA ── */
+    #cta {
+      padding: 100px 0;
+      background: var(--gradient-hero);
+      position: relative;
+      text-align: center;
+      overflow: hidden;
+    }
+    #cta::before {
+      content: '';
+      position: absolute;
+      top: -30%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 700px;
+      height: 700px;
+      background: radial-gradient(circle, rgba(79,70,229,0.12) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    #cta h2 {
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 900;
+      letter-spacing: -1px;
+      margin-bottom: 1rem;
+      position: relative;
+    }
+    #cta p {
+      font-size: 1.1rem;
+      color: rgba(255,255,255,0.6);
+      max-width: 550px;
+      margin: 0 auto 2rem;
+      position: relative;
+    }
+    #cta .btn-cta {
+      background: var(--gradient-1);
+      border: none;
+      color: #fff;
+      padding: 1rem 2.5rem;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      transition: all 0.3s;
+      box-shadow: 0 4px 30px rgba(79,70,229,0.4);
+      position: relative;
+    }
+    #cta .btn-cta:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 40px rgba(79,70,229,0.5);
+      color: #fff;
+    }
+
+    /* ── Footer ── */
+    footer {
+      background: #06060a;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      padding: 3rem 0 1.5rem;
+    }
+    footer .brand {
+      font-weight: 800;
+      font-size: 1.2rem;
+      background: var(--gradient-1);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    footer a {
+      color: rgba(255,255,255,0.5);
+      text-decoration: none;
+      transition: color 0.3s;
+      font-size: 0.9rem;
+    }
+    footer a:hover { color: #fff; }
+    footer .social-links a {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.5);
+      transition: all 0.3s;
+      font-size: 1.1rem;
+    }
+    footer .social-links a:hover {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+    }
+    footer .copyright {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.3);
+    }
+    footer hr {
+      border-color: rgba(255,255,255,0.06);
+    }
+
+    /* ── Animations ── */
+    .fade-up {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .fade-up.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── Floating particles ── */
+    .particle {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      background: rgba(79,70,229,0.15);
+      animation: float 20s infinite ease-in-out;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-40px) scale(1.1); }
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #0a0a0f; }
+    ::-webkit-scrollbar-thumb { background: #2d2d4a; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3d3d5a; }
+
+    /* ── Responsive tweaks ── */
+    @media (max-width: 767.98px) {
+      .hero { text-align: center; padding-top: 100px; }
+      .hero p { margin-left: auto; margin-right: auto; }
+      .hero-actions { justify-content: center; }
+      .hero-stats { justify-content: center; }
+      .hero-mockup { margin-top: 2rem; }
+      .hero-mockup-img { transform: none; max-width: 100%; }
+      .feature-card { text-align: center; }
+      .feature-icon { margin-left: auto; margin-right: auto; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══ NAVBAR ═══ -->
+  <nav class="navbar navbar-expand-lg fixed-top" id="mainNav">
+    <div class="container">
+      <a class="navbar-brand" href="#">
+        <i class="bi bi-clipboard2-check-fill"></i> PM Agent
+      </a>
+      <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu" aria-controls="navMenu" aria-expanded="false" aria-label="Toggle navigation">
+        <i class="bi bi-list" style="font-size:1.5rem;color:#fff;"></i>
+      </button>
+      <div class="collapse navbar-collapse" id="navMenu">
+        <ul class="navbar-nav mx-auto">
+          <li class="nav-item"><a class="nav-link" href="#features">Features</a></li>
+          <li class="nav-item"><a class="nav-link" href="#tools">Tools</a></li>
+          <li class="nav-item"><a class="nav-link" href="#how-it-works">How It Works</a></li>
+          <li class="nav-item"><a class="nav-link" href="#integrations">Integrations</a></li>
+        </ul>
+        <a class="btn-github-nav" href="https://github.com/Gida-concept/Memorise" target="_blank" rel="noopener">
+          <i class="bi bi-github me-1"></i> GitHub
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═══ HERO ═══ -->
+  <section class="hero" id="hero">
+    <div class="particle" style="width:300px;height:300px;top:10%;right:15%;animation-delay:-5s;"></div>
+    <div class="particle" style="width:200px;height:200px;bottom:20%;left:10%;animation-delay:-12s;"></div>
+    <div class="container position-relative">
+      <div class="row align-items-center g-5">
+        <div class="col-lg-6">
+          <div class="hero-badge">
+            <i class="bi bi-dot"></i> v1.0 — MCP Ready
+          </div>
+          <h1>
+            Give Your AI<br />
+            <span class="gradient-text">Project Management</span><br />
+            Superpowers
+          </h1>
+          <p>
+            PM Agent is an MCP server that plugs into your AI coding assistant —
+            tracking decisions, surfacing blockers, enforcing rules, and analyzing
+            scope so your AI works with full project context.
+          </p>
+          <div class="hero-actions">
+            <a href="https://github.com/Gida-concept/Memorise" target="_blank" rel="noopener" class="btn btn-primary-gradient">
+              <i class="bi bi-github me-2"></i>View on GitHub
+            </a>
+            <a href="#how-it-works" class="btn btn-outline-hero">
+              <i class="bi bi-arrow-down me-1"></i> How It Works
+            </a>
+          </div>
+          <div class="hero-stats">
+            <div class="hero-stat">
+              <h3>17+</h3>
+              <p>MCP Tools</p>
+            </div>
+            <div class="hero-stat">
+              <h3>6</h3>
+              <p>CLI Integrations</p>
+            </div>
+            <div class="hero-stat">
+              <h3>0</h3>
+              <p>External Dependencies</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="hero-mockup">
+            <img
+              src="https://images.unsplash.com/photo-1611224923853-80b023f02d71?q=80&w=800&auto=format&fit=crop"
+              alt="Project management kanban board"
+              class="hero-mockup-img"
+              loading="eager"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ FEATURES ═══ -->
+  <section id="features">
+    <div class="container">
+      <div class="section-header fade-up">
+        <span class="section-tag">Features</span>
+        <h2>Everything Your AI Needs<br />to Manage Projects</h2>
+        <p>PM Agent gives your coding assistant structured awareness of your project's state — not just code, but context.</p>
+      </div>
+      <div class="row g-4">
+        <div class="col-lg-3 col-md-6 fade-up">
+          <div class="feature-card">
+            <div class="feature-icon"><i class="bi bi-clipboard-check"></i></div>
+            <h5>Decision Tracking</h5>
+            <p>Log architectural and project decisions as ADRs with full rationale. Your AI can query, link, and enforce them.</p>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-6 fade-up">
+          <div class="feature-card">
+            <div class="feature-icon"><i class="bi bi-shield-exclamation"></i></div>
+            <h5>Blocker Management</h5>
+            <p>Surface, track, and resolve blockers. Your AI knows what's blocking progress and can suggest unblock strategies.</p>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-6 fade-up">
+          <div class="feature-card">
+            <div class="feature-icon"><i class="bi bi-list-task"></i></div>
+            <h5>Task Awareness</h5>
+            <p>Your AI reads your task list and sprint scope — it understands what's in flight before suggesting next steps.</p>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-6 fade-up">
+          <div class="feature-card">
+            <div class="feature-icon"><i class="bi bi-diagram-3"></i></div>
+            <h5>Dependency Mapping</h5>
+            <p>Analyze how decisions, tasks, and code modules interconnect. Know the blast radius before making changes.</p>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-6 fade-up">
+          <div class="feature-card">
+            <div class="feature-icon"><i class="bi bi-zoom-in"></i></div>
+            <h5>Scope Analysis</h5>
+            <p>Run scope checks on new feature requests against sprint capacity. Your AI will say "this fits" or "too risky."</p>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-6 fade-up">
+          <div class="feature-card">
+            <div class="feature-icon"><i class="bi bi-gear-wide"></i></div>
+            <h5>Rules Engine</h5>
+            <p>Define PM rules (scope, code, process) with hard or soft enforcement. Your AI catches violations before they land.</p>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-6 fade-up">
+          <div class="feature-card">
+            <div class="feature-icon"><i class="bi bi-code-square"></i></div>
+            <h5>Codebase Scanning</h5>
+            <p>Scan your codebase for affected modules when a decision changes. Your AI connects PM context to source code.</p>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-6 fade-up">
+          <div class="feature-card">
+            <div class="feature-icon"><i class="bi bi-brain"></i></div>
+            <h5>Project Memory</h5>
+            <p>Persistent memory that survives context limits. Your AI remembers past decisions, notes, and project state across sessions.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ TOOLS ═══ -->
+  <section id="tools">
+    <div class="container">
+      <div class="section-header fade-up">
+        <span class="section-tag">MCP Tools</span>
+        <h2>17+ Tools Your AI Can Call</h2>
+        <p>Every tool follows the Model Context Protocol. Your AI chooses the right one — you just talk naturally.</p>
+      </div>
+      <div class="row justify-content-center">
+        <div class="col-lg-10">
+          <div class="tools-grid fade-up">
+            <div class="tool-item">
+              <div class="tool-item-icon"><i class="bi bi-info-circle"></i></div>
+              <div class="tool-item-info">
+                <strong>pm_get_context</strong>
+                <span>Project overview — blockers, decisions, tasks, scope</span>
+              </div>
+            </div>
+            <div class="tool-item">
+              <div class="tool-item-icon"><i class="bi bi-journal-plus"></i></div>
+              <div class="tool-item-info">
+                <strong>pm_log_decision</strong>
+                <span>Record an architectural or process decision</span>
+              </div>
+            </div>
+            <div class="tool-item">
+              <div class="tool-item-icon"><i class="bi bi-exclamation-triangle"></i></div>
+              <div class="tool-item-info">
+                <strong>pm_add_blocker</strong>
+                <span>Log a new blocker with description and severity</span>
+              </div>
+            </div>
+            <div class="tool-item">
+              <div class="tool-item-icon"><i class="bi bi-check2-circle"></i></div>
+              <div class="tool-item-info">
+                <strong>pm_resolve_blocker</strong>
+                <span>Mark a blocker as resolved</span>
+              </div>
+            </div>
+            <div class="tool-item">
+              <div class="tool-item-icon"><i class="bi bi-pencil-square"></i></div>
+              <div class="tool-item-info">
+                <strong>pm_add_note</strong>
+                <span>Save an observation or insight</span>
+              </div>
+            </div>
+            <div class="tool-item">
+              <div class="tool-item-icon"><i class="bi bi-rulers"></i></div>
+              <div class="tool-item-info">
+                <strong>pm_scope_check</strong>
+                <span>Check if a feature fits current sprint capacity</span>
+              </div>
+            </div>
+            <div class="tool-item">
+              <div class="tool-item-icon"><i class="bi bi-bookmark-check"></i></div>
+              <div class="tool-item-info">
+                <strong>pm_add_rule</strong>
+                <span>Add a PM rule (scope / code / process)</span>
+              </div>
+            </div>
+            <div class="tool-item">
+              <div class="tool-item-icon"><i class="bi bi-search"></i></div>
+              <div class="tool-item-info">
+                <strong>pm_scan_codebase</strong>
+                <span>Scan code affected by a decision or change</span>
+              </div>
+            </div>
+            <div class="tool-item">
+              <div class="tool-item-icon"><i class="bi bi-boxes"></i></div>
+              <div class="tool-item-info">
+                <strong>pm_analyze_dependencies</strong>
+                <span>Map dependency chains between tasks and code</span>
+              </div>
+            </div>
+            <div class="tool-item">
+              <div class="tool-item-icon"><i class="bi bi-clock-history"></i></div>
+              <div class="tool-item-info">
+                <strong>pm_get_timeline</strong>
+                <span>Activity timeline for recent project changes</span>
+              </div>
+            </div>
+            <div class="tool-item">
+              <div class="tool-item-icon"><i class="bi bi-clipboard-data"></i></div>
+              <div class="tool-item-info">
+                <strong>pm_get_rules</strong>
+                <span>List all active PM rules</span>
+              </div>
+            </div>
+            <div class="tool-item">
+              <div class="tool-item-icon"><i class="bi bi-flag"></i></div>
+              <div class="tool-item-info">
+                <strong>pm_check_rules</strong>
+                <span>Check rules against a proposed action</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ HOW IT WORKS ═══ -->
+  <section id="how-it-works">
+    <div class="container">
+      <div class="section-header fade-up">
+        <span class="section-tag">Getting Started</span>
+        <h2>Set Up in 4 Steps</h2>
+        <p>Works with every major AI coding tool. No API keys, no accounts — just a config file.</p>
+      </div>
+      <div class="row g-4 justify-content-center">
+        <div class="col-md-3 fade-up">
+          <div class="step-card">
+            <div class="step-connector"></div>
+            <div class="step-number">1</div>
+            <i class="bi bi-download" style="font-size:1.8rem;color:#a5b4fc;margin-bottom:0.75rem;display:block;"></i>
+            <h5>Install Node.js</h5>
+            <p>PM Agent runs on Node.js v18+. No global install needed — npx handles everything.</p>
+          </div>
+        </div>
+        <div class="col-md-3 fade-up">
+          <div class="step-card">
+            <div class="step-connector"></div>
+            <div class="step-number">2</div>
+            <i class="bi bi-file-earmark-code" style="font-size:1.8rem;color:#a5b4fc;margin-bottom:0.75rem;display:block;"></i>
+            <h5>Add Config</h5>
+            <p>Drop the correct JSON / TOML snippet into your AI tool's MCP config file.</p>
+          </div>
+        </div>
+        <div class="col-md-3 fade-up">
+          <div class="step-card">
+            <div class="step-connector"></div>
+            <div class="step-number">3</div>
+            <i class="bi bi-arrow-repeat" style="font-size:1.8rem;color:#a5b4fc;margin-bottom:0.75rem;display:block;"></i>
+            <h5>Restart Your AI</h5>
+            <p>MCP config is read at startup. Restart your editor or CLI to pick up the changes.</p>
+          </div>
+        </div>
+        <div class="col-md-3 fade-up">
+          <div class="step-card">
+            <div class="step-number">4</div>
+            <i class="bi bi-chat-dots" style="font-size:1.8rem;color:#a5b4fc;margin-bottom:0.75rem;display:block;"></i>
+            <h5>Start Using It</h5>
+            <p>Just ask your AI naturally — "What are my blockers?" — and PM Agent handles the rest.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ INTEGRATIONS ═══ -->
+  <section id="integrations">
+    <div class="container">
+      <div class="section-header fade-up">
+        <span class="section-tag">Compatible With</span>
+        <h2>Works With Every Major AI Coding Tool</h2>
+        <p>PM Agent speaks standard MCP — it works with any client that supports the protocol.</p>
+      </div>
+      <div class="row g-3 justify-content-center">
+        <div class="col-4 col-md-2 fade-up">
+          <div class="integration-card">
+            <div class="icon-wrap"><i class="bi bi-chat-dots-fill"></i></div>
+            <h6>Claude Code</h6>
+            <span>.mcp.json / ~/.claude.json</span>
+          </div>
+        </div>
+        <div class="col-4 col-md-2 fade-up">
+          <div class="integration-card">
+            <div class="icon-wrap"><i class="bi bi-cursor-fill"></i></div>
+            <h6>Cursor</h6>
+            <span>.cursor/mcp.json</span>
+          </div>
+        </div>
+        <div class="col-4 col-md-2 fade-up">
+          <div class="integration-card">
+            <div class="icon-wrap"><i class="bi bi-code-slash"></i></div>
+            <h6>VS Code</h6>
+            <span>.vscode/mcp.json</span>
+          </div>
+        </div>
+        <div class="col-4 col-md-2 fade-up">
+          <div class="integration-card">
+            <div class="icon-wrap"><i class="bi bi-terminal-plus"></i></div>
+            <h6>OpenCode</h6>
+            <span>opencode.json</span>
+          </div>
+        </div>
+        <div class="col-4 col-md-2 fade-up">
+          <div class="integration-card">
+            <div class="icon-wrap"><i class="bi bi-arrow-right-square"></i></div>
+            <h6>Continue.dev</h6>
+            <span>config.json / config.yaml</span>
+          </div>
+        </div>
+        <div class="col-4 col-md-2 fade-up">
+          <div class="integration-card">
+            <div class="icon-wrap"><i class="bi bi-braces"></i></div>
+            <h6>Zed</h6>
+            <span>settings.json</span>
+          </div>
+        </div>
+        <div class="col-4 col-md-2 fade-up">
+          <div class="integration-card">
+            <div class="icon-wrap"><i class="bi bi-robot"></i></div>
+            <h6>Codex CLI</h6>
+            <span>codexrc.toml</span>
+          </div>
+        </div>
+        <div class="col-4 col-md-2 fade-up">
+          <div class="integration-card">
+            <div class="icon-wrap"><i class="bi bi-plugin"></i></div>
+            <h6>Any MCP Client</h6>
+            <span>Standard stdio MCP</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ CTA ═══ -->
+  <section id="cta">
+    <div class="container position-relative">
+      <h2 class="fade-up">Ready to Give Your AI<br />Project Context?</h2>
+      <p class="fade-up">Clone the repo, drop in the config, and restart. Your AI will start seeing blockers, decisions, and scope in seconds.</p>
+      <a href="https://github.com/Gida-concept/Memorise" target="_blank" rel="noopener" class="btn btn-cta fade-up">
+        <i class="bi bi-github me-2"></i> Get Started on GitHub
+      </a>
+    </div>
+  </section>
+
+  <!-- ═══ FOOTER ═══ -->
+  <footer>
+    <div class="container">
+      <div class="row g-4 align-items-center">
+        <div class="col-md-4">
+          <span class="brand"><i class="bi bi-clipboard2-check-fill" style="background-clip:unset;-webkit-text-fill-color:#a855f7;"></i> PM Agent</span>
+          <p class="mt-2 mb-0 copyright">AI-powered project management<br />for your coding assistant.</p>
+        </div>
+        <div class="col-md-4 text-md-center">
+          <div class="social-links d-inline-flex gap-2">
+            <a href="https://github.com/Gida-concept/Memorise" target="_blank" rel="noopener" aria-label="GitHub">
+              <i class="bi bi-github"></i>
+            </a>
+            <a href="https://github.com/Gida-concept/Memorise/issues" target="_blank" rel="noopener" aria-label="Issues">
+              <i class="bi bi-bug"></i>
+            </a>
+          </div>
+        </div>
+        <div class="col-md-4 text-md-end">
+          <a href="https://github.com/Gida-concept/Memorise" target="_blank" rel="noopener" class="d-block mb-1">
+            <i class="bi bi-book me-1"></i> Documentation
+          </a>
+          <a href="https://github.com/Gida-concept/Memorise?tab=MIT-1-ov-file" target="_blank" rel="noopener" class="d-block">
+            <i class="bi bi-shield me-1"></i> MIT License
+          </a>
+        </div>
+      </div>
+      <hr class="my-4" />
+      <div class="text-center copyright">
+        &copy; 2026 Gida Concept. Built with the Model Context Protocol.
+      </div>
+    </div>
+  </footer>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Custom JS -->
+  <script>
+    // ── Navbar scroll effect ──
+    const navbar = document.getElementById('mainNav');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 60);
+    });
+
+    // ── Intersection Observer for fade-up animations ──
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          // Stagger children if they're also fade-up
+          const children = entry.target.querySelectorAll('.fade-up');
+          children.forEach((el, i) => {
+            setTimeout(() => el.classList.add('visible'), i * 100);
+          });
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+    document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+    // ── Smooth scroll for anchor links ──
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          e.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Collapse mobile nav
+          const nav = document.getElementById('navMenu');
+          const bsCollapse = bootstrap.Collapse.getInstance(nav);
+          if (bsCollapse) bsCollapse.hide();
+        }
+      });
+    });
+
+    // ── Parallax-like gradient shift on hero ──
+    document.addEventListener('mousemove', (e) => {
+      const hero = document.querySelector('.hero');
+      if (!hero) return;
+      const rect = hero.getBoundingClientRect();
+      if (e.clientY > rect.bottom) return;
+      const x = (e.clientX / window.innerWidth - 0.5) * 10;
+      const y = (e.clientY / window.innerHeight - 0.5) * 10;
+      hero.style.setProperty('--mouse-x', `${x}px`);
+      hero.style.setProperty('--mouse-y', `${y}px`);
+    });
+
+    console.log('🚀 PM Agent — AI-powered project management for your coding assistant.');
+  </script>
+</body>
+</html>
