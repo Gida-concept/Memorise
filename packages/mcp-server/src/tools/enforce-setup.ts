@@ -102,8 +102,8 @@ function copyHooksAndWriteConfig(projectPath: string, hooksSrcDir: string): Sett
       hooks: [
         {
           type: 'command',
-          command: 'node ${CLAUDE_PROJECT_DIR}/.claude/hooks/pre-tool-use.mjs',
-          args: [],
+          command: 'node',
+          args: ['${CLAUDE_PROJECT_DIR}/.claude/hooks/pre-tool-use.mjs'],
         },
       ],
     },
@@ -114,8 +114,8 @@ function copyHooksAndWriteConfig(projectPath: string, hooksSrcDir: string): Sett
       hooks: [
         {
           type: 'command',
-          command: 'node ${CLAUDE_PROJECT_DIR}/.claude/hooks/session-start.mjs',
-          args: [],
+          command: 'node',
+          args: ['${CLAUDE_PROJECT_DIR}/.claude/hooks/session-start.mjs'],
         },
       ],
     },

@@ -126,8 +126,8 @@ function installHooks(projectPath: string): Record<string, unknown> {
       hooks: [
         {
           type: 'command',
-          command: 'node ${CLAUDE_PROJECT_DIR}/.claude/hooks/pre-tool-use.mjs',
-          args: [],
+          command: 'node',
+          args: ['${CLAUDE_PROJECT_DIR}/.claude/hooks/pre-tool-use.mjs'],
         },
       ],
     },
@@ -138,8 +138,8 @@ function installHooks(projectPath: string): Record<string, unknown> {
       hooks: [
         {
           type: 'command',
-          command: 'node ${CLAUDE_PROJECT_DIR}/.claude/hooks/session-start.mjs',
-          args: [],
+          command: 'node',
+          args: ['${CLAUDE_PROJECT_DIR}/.claude/hooks/session-start.mjs'],
         },
       ],
     },

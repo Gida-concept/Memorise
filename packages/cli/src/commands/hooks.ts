@@ -133,8 +133,8 @@ export function installHooks(projectPath: string): Record<string, unknown> {
       hooks: [
         {
           type: 'command',
-          command: 'node ${CLAUDE_PROJECT_DIR}/.claude/hooks/pre-tool-use.mjs',
-          args: [],
+          command: 'node',
+          args: ['${CLAUDE_PROJECT_DIR}/.claude/hooks/pre-tool-use.mjs'],
         },
       ],
     },
@@ -145,8 +145,8 @@ export function installHooks(projectPath: string): Record<string, unknown> {
       hooks: [
         {
           type: 'command',
-          command: 'node ${CLAUDE_PROJECT_DIR}/.claude/hooks/session-start.mjs',
-          args: [],
+          command: 'node',
+          args: ['${CLAUDE_PROJECT_DIR}/.claude/hooks/session-start.mjs'],
         },
       ],
     },
@@ -190,10 +190,10 @@ function hasPmAgentHook(groups: HookMatcherGroup[] | undefined): boolean {
   for (const group of groups) {
     if (!group.hooks || !Array.isArray(group.hooks)) continue;
     for (const hook of group.hooks) {
+      // Check both the command string and args array for hook script references
       const cmd = hook.command || '';
-      if (cmd.includes('pre-tool-use.mjs') || cmd.includes('session-start.mjs')) {
-        return true;
-      }
+      if (cmd.includes('pre-tool-use.mjs') || cmd.includes('session-start.mjs')) return true;
+      if (hook.args && hook.args.some(a => a.includes('pre-tool-use.mjs') || a.includes('session-start.mjs'))) return true;
     }
   }
   return false;
@@ -202,13 +202,13 @@ function hasPmAgentHook(groups: HookMatcherGroup[] | undefined): boolean {
 /**
  * Get the command strings from a hook config for display.
  */
-function getHookCommands(groups: HookMatcherGroup[] | undefined): string[] {
+function getHookCommands(groups: HookMatcherGroup[] | undefined): { command: string; args?: string[] }[] {
   if (!groups || !Array.isArray(groups)) return [];
-  const cmds: string[] = [];
+  const cmds: { command: string; args?: string[] }[] = [];
   for (const group of groups) {
     if (!group.hooks || !Array.isArray(group.hooks)) continue;
     for (const hook of group.hooks) {
-      if (hook.command) cmds.push(hook.command);
+      if (hook.command) cmds.push({ command: hook.command, args: hook.args });
     }
   }
   return cmds;
@@ -217,14 +217,37 @@ function getHookCommands(groups: HookMatcherGroup[] | undefined): string[] {
 /**
  * Check hook scripts exist on disk given the command string.
  */
-function hookScriptExists(command: string): boolean {
-  // command is like "node ${CLAUDE_PROJECT_DIR}/.claude/hooks/pre-tool-use.mjs"
-  // Replace ${CLAUDE_PROJECT_DIR} with cwd for disk check
-  const normalized = command.replace(/\$\{CLAUDE_PROJECT_DIR\}/g, process.cwd());
-  const parts = normalized.split(' ');
+function hookScriptExists(command: string, args?: string[]): boolean {
+  // For exec form, check args first
+  if (args && args.length > 0) {
+    const resolveVar = (part: string): string =>
+      part.replace(/\$\{CLAUDE_PROJECT_DIR\}/g, process.cwd()).replace(/%CLAUDE_PROJECT_DIR%/g, process.cwd());
+    for (const arg of args) {
+      const resolved = resolveVar(arg);
+      if ((resolved.endsWith('.mjs') || resolved.endsWith('.js') || resolved.endsWith('.sh')) && fs.existsSync(path.resolve(process.cwd(), resolved))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // For shell form: parse the command string
+  // command might be like "node" with args, or a direct path in the old format.
+  // Handle exec form: "node" with args[0] containing ${CLAUDE_PROJECT_DIR}
+  // Handle shell form: "node ${CLAUDE_PROJECT_DIR}/.claude/hooks/pre-tool-use.mjs"
+  // Handle legacy shell form: "node %CLAUDE_PROJECT_DIR%/.claude/hooks/pre-tool-use.mjs"
+  const resolveVar = (part: string): string => {
+    return part
+      .replace(/\$\{CLAUDE_PROJECT_DIR\}/g, process.cwd())
+      .replace(/%CLAUDE_PROJECT_DIR%/g, process.cwd());
+  };
+
+  // Split by whitespace for shell-form commands
+  const parts = command.split(/\s+/);
   for (const part of parts) {
-    if (part.endsWith('.mjs') || part.endsWith('.js') || part.endsWith('.sh')) {
-      return fs.existsSync(path.resolve(process.cwd(), part));
+    const resolved = resolveVar(part);
+    if (resolved.endsWith('.mjs') || resolved.endsWith('.js') || resolved.endsWith('.sh')) {
+      return fs.existsSync(path.resolve(process.cwd(), resolved));
     }
   }
   return false;
@@ -283,18 +306,26 @@ export async function hooksStatusCommand(): Promise<void> {
   const hooks = settings.hooks || {};
   const preToolUseGroups = hooks.PreToolUse as HookMatcherGroup[] | undefined;
   const sessionStartGroups = hooks.SessionStart as HookMatcherGroup[] | undefined;
-  const preToolUseActive = hasPmAgentHook(preToolUseGroups) && getHookCommands(preToolUseGroups).some(cmd => hookScriptExists(cmd));
-  const sessionStartActive = hasPmAgentHook(sessionStartGroups) && getHookCommands(sessionStartGroups).some(cmd => hookScriptExists(cmd));
+  const preToolUseHooks = getHookCommands(preToolUseGroups);
+  const sessionStartHooks = getHookCommands(sessionStartGroups);
+  const preToolUseActive = hasPmAgentHook(preToolUseGroups) && preToolUseHooks.some(h => hookScriptExists(h.command, h.args));
+  const sessionStartActive = hasPmAgentHook(sessionStartGroups) && sessionStartHooks.some(h => hookScriptExists(h.command, h.args));
 
-  const preToolUseCmds = getHookCommands(preToolUseGroups);
-  const sessionStartCmds = getHookCommands(sessionStartGroups);
+  const displayCmds = (hooks: { command: string; args?: string[] }[]): string => {
+    if (hooks.length === 0) return Colors.warning('(not set)');
+    return hooks.map(h => {
+      const display = h.command;
+      if (h.args && h.args.length > 0) return `${display} ${h.args.join(' ')}`;
+      return display;
+    }).join(', ');
+  };
 
   console.log(Colors.highlight('\nPM Agent Hooks Status'));
   console.log(Colors.muted('  Settings: ') + Colors.info(settingsPath));
   console.log(Colors.muted('  PreToolUse:  ') + (preToolUseActive ? Colors.success('ACTIVE') : Colors.warning('INACTIVE')));
   console.log(Colors.muted('  SessionStart: ') + (sessionStartActive ? Colors.success('ACTIVE') : Colors.warning('INACTIVE')));
-  console.log(Colors.muted('  PreToolUse scripts: ') + (preToolUseCmds.length > 0 ? Colors.muted(preToolUseCmds.join(', ')) : Colors.warning('(not set)')));
-  console.log(Colors.muted('  SessionStart scripts: ') + (sessionStartCmds.length > 0 ? Colors.muted(sessionStartCmds.join(', ')) : Colors.warning('(not set)')));
+  console.log(Colors.muted('  PreToolUse scripts: ') + displayCmds(preToolUseHooks));
+  console.log(Colors.muted('  SessionStart scripts: ') + displayCmds(sessionStartHooks));
 }
 
 /**
