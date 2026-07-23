@@ -1,6 +1,6 @@
 {
   "name": "@gida-concept/pm-agent-proxy",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "PM Agent MCP enforcement proxy — intercepts tool calls, evaluates rules, forwards to real PM Agent server",
   "files": [
     "dist",

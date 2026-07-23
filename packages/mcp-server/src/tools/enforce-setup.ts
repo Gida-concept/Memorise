@@ -24,9 +24,8 @@ import { createRequire } from 'module';
  */
 
 interface HookMatcherGroup {
-  matcher?: string | boolean;
-  command?: string;
-  hooks?: Array<{
+  matcher?: string;
+  hooks: Array<{
     type: string;
     command: string;
     args?: string[];
@@ -99,14 +98,26 @@ function copyHooksAndWriteConfig(projectPath: string, hooksSrcDir: string): Sett
   const hooks: Record<string, HookMatcherGroup[]> = settings.hooks || {};
   hooks.PreToolUse = [
     {
-      matcher: true,
-      command: 'node .claude/hooks/pre-tool-use.mjs',
+      matcher: '',
+      hooks: [
+        {
+          type: 'command',
+          command: 'node .claude/hooks/pre-tool-use.mjs',
+          args: [],
+        },
+      ],
     },
   ];
   hooks.SessionStart = [
     {
-      matcher: true,
-      command: 'node .claude/hooks/session-start.mjs',
+      matcher: '',
+      hooks: [
+        {
+          type: 'command',
+          command: 'node .claude/hooks/session-start.mjs',
+          args: [],
+        },
+      ],
     },
   ];
   settings.hooks = hooks;

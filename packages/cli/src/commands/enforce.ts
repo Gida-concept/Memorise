@@ -122,14 +122,26 @@ function installHooks(projectPath: string): Record<string, unknown> {
   const hooks: Record<string, HookMatcherGroup[]> = (settings.hooks as Record<string, HookMatcherGroup[]>) || {};
   hooks.PreToolUse = [
     {
-      matcher: true,
-      command: 'node .claude/hooks/pre-tool-use.mjs',
+      matcher: '',
+      hooks: [
+        {
+          type: 'command',
+          command: 'node .claude/hooks/pre-tool-use.mjs',
+          args: [],
+        },
+      ],
     },
   ];
   hooks.SessionStart = [
     {
-      matcher: true,
-      command: 'node .claude/hooks/session-start.mjs',
+      matcher: '',
+      hooks: [
+        {
+          type: 'command',
+          command: 'node .claude/hooks/session-start.mjs',
+          args: [],
+        },
+      ],
     },
   ];
   settings.hooks = hooks;
@@ -148,11 +160,10 @@ function getSettingsPath(projectPath?: string): string {
 }
 
 interface HookMatcherGroup {
-  matcher?: string | boolean;
-  command?: string;
-  hooks?: Array<{
+  matcher?: string;
+  hooks: Array<{
     type: string;
-    command?: string;
+    command: string;
     args?: string[];
     [key: string]: unknown;
   }>;
@@ -170,19 +181,11 @@ interface Settings {
 function hasPmAgentHook(groups: HookMatcherGroup[] | undefined): boolean {
   if (!groups || !Array.isArray(groups)) return false;
   for (const group of groups) {
-    // Check flat format (command at group level)
-    if (group.command) {
-      if (group.command.includes('pre-tool-use.mjs') || group.command.includes('session-start.mjs')) {
+    if (!group.hooks || !Array.isArray(group.hooks)) continue;
+    for (const hook of group.hooks) {
+      const cmd = hook.command || '';
+      if (cmd.includes('pre-tool-use.mjs') || cmd.includes('session-start.mjs')) {
         return true;
-      }
-    }
-    // Check nested format (hooks array with type/command)
-    if (group.hooks && Array.isArray(group.hooks)) {
-      for (const hook of group.hooks) {
-        const cmd = hook.command || '';
-        if (cmd.includes('pre-tool-use.mjs') || cmd.includes('session-start.mjs')) {
-          return true;
-        }
       }
     }
   }
