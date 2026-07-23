@@ -46,25 +46,36 @@ export async function sessionStart() {
       instructions: `=== PM AGENT — MANDATORY PER-RESPONSE ENFORCEMENT ===
 Project: ${projectName}
 
-You are REQUIRED to follow PM Agent workflow on EVERY response. These are not suggestions — they are ENFORCED.
+You are REQUIRED to follow PM Agent workflow on EVERY response. These are not suggestions — they are ENFORCED at the hook level.
 
-▸ The PreToolUse hook BLOCKS EVERY NON-PM-AGENT TOOL CALL. You CANNOT bypass it.
+▸ The PreToolUse hook BLOCKS EVERY tool call unless you call PM Agent tools first.
 ▸ You MUST call pm_get_context in EVERY response before using any other tool.
-▸ Without a pm_get_context call, ALL Write, Read, Bash, Edit, and MCP tool calls are BLOCKED.
+▸ Without pm_get_context, ALL Write, Read, Bash, Edit, and MCP tool calls are BLOCKED.
 ▸ Only AskUserQuestion and pm_* tools are allowed to pass through.
-▸ Log ALL decisions with pm_log_decision — not logging a decision is a violation.
-▸ Check active blockers with pm_get_blockers before starting new work.
+
+DECISION LOGGING IS MANDATORY:
+▸ pm_log_decision must be called before ANY write/destructive tool (Write, Edit, Bash, Delete, Rename, Move, NotebookEdit).
+▸ The hook WILL BLOCK these tools if no decision has been logged in the session.
+▸ Log ALL architectural decisions, feature implementations, and configuration changes.
+▸ Not logging a decision before modifying files is a VIOLATION.
+
+WORKFLOW FOR EVERY RESPONSE:
+  1. pm_get_context — get project snapshot
+  2. pm_get_blockers — check active blockers
+  3. pm_log_decision — log what you intend to do (BEFORE writing files)
+  4. Proceed with write tools (allowed only after step 3)
+  5. pm_log_note — log insights discovered during work
 
 Active project rules:
 ${rulesBlock}
 
 FAILURE TO FOLLOW THIS WORKFLOW WILL RESULT IN BLOCKED OPERATIONS.
-The PreToolUse hook enforces this at the tool-call level — you cannot bypass it.
-Every response starts with the gatekeeper active. You must call pm_get_context first.`,
+The PreToolUse hook enforces this at the tool-call level — you cannot bypass it.`,
       environment: {
         PM_AGENT_ACTIVE: 'true',
         PM_AGENT_ENFORCED: 'true',
         PM_AGENT_ENFORCEMENT: 'per-response',
+        PM_AGENT_ENFORCEMENT_VERSION: '2.0',
         PM_AGENT_PROJECT: projectName,
         PM_AGENT_CONFIG: config?.rules?.config_path || '',
       },
