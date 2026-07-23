@@ -1,6 +1,6 @@
 {
   "name": "@gida-concept/pm-agent-mcp-server",
-  "version": "0.2.7",
+  "version": "0.2.9",
   "description": "PM Agent MCP server — expose project memory and rules to AI agents",
   "files": [
     "dist",
