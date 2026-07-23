@@ -171,9 +171,25 @@ export function openDb(config: DbConfig): Database.Database {
     }
   }
 
-  const db = new Database(config.memory ? ':memory:' : config.path, {
-    readonly: config.readonly ?? false,
-  });
+  let db: Database.Database;
+  try {
+    db = new Database(config.memory ? ':memory:' : config.path, {
+      readonly: config.readonly ?? false,
+    });
+  } catch (err) {
+    // Wrap better-sqlite3 errors with a more helpful message
+    const msg = String(err);
+    if (msg.includes('cannot find module') || msg.includes('better-sqlite3') || msg.includes('node-gyp') || msg.includes('napi')) {
+      throw new Error(
+        `Failed to load native SQLite module (better-sqlite3).\n` +
+        `This usually happens when running from npx cache.\n` +
+        `Fix: Install the package locally first:\n\n` +
+        `  npm install -D @gida-concept/pm-agent-cli\n` +
+        `  npx pm init\n`
+      );
+    }
+    throw err;
+  }
 
   db.pragma('journal_mode = WAL');
   db.pragma('busy_timeout = 5000');

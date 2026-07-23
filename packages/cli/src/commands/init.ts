@@ -43,7 +43,22 @@ export async function initCommand(opts: Record<string, any>): Promise<void> {
     fs.writeFileSync(configPath, defaultConfig, 'utf-8');
 
     // Create the database
-    const db = openDb({ path: dbPath });
+    let db;
+    try {
+      db = openDb({ path: dbPath });
+    } catch (err) {
+      spinner.fail('Failed to create database');
+      const isNative = String(err).includes('better-sqlite3') || String(err).includes('node-gyp') || String(err).includes('native');
+      if (isNative) {
+        console.error('\n  The SQLite native module failed to compile from npx cache.');
+        console.error('  Fix: install locally first:\n');
+        console.error('    npm install -D @gida-concept/pm-agent-cli');
+        console.error('    npx pm init\n');
+        console.error('  Or use --no-package-lock if you hit an ECOMPROMISED error:\n');
+        console.error('    npx --no-package-lock -y @gida-concept/pm-agent-cli init');
+      }
+      throw new PmCliError(`Database initialization failed: ${err}`, ExitCode.CONFIG_ERROR);
+    }
     closeDb(db);
 
     // Write default rules.toml (shipped defaults with all rules)
@@ -92,9 +107,106 @@ export async function initCommand(opts: Record<string, any>): Promise<void> {
       // Integration detection failed silently — don't block init
     }
 
-    // Always run initial scan
+    // Always run initial scan + semantic analysis
     spinner.text = 'Running initial scan...';
     await scanCommand({ full: true });
+
+    // Semantic analysis: extract exports, imports, types from every file
+    try {
+      spinner.text = 'Analyzing codebase semantics...';
+      const { understandCommand } = await import('./understand.js');
+      await understandCommand({});
+    } catch {
+      // Semantic analysis is best-effort; don't block init
+    }
+
+    // Write CLAUDE.md with PM Agent instructions
+    try {
+      const claudeMdPath = path.join(projectRoot, 'CLAUDE.md');
+      if (!fs.existsSync(claudeMdPath) || opts.force) {
+        const pmAgentInstructions = [
+          '# PM Agent — Project Management Context',
+          '',
+          'This project uses **PM Agent** to track decisions, blockers, notes, scope, and codebase intelligence.',
+          '',
+          '## Required Workflow',
+          '',
+          'On EVERY interaction, follow this sequence:',
+          '',
+          '1. **START** — Read the `.pm-agent/` database to learn current project state',
+          '2. **CHECK** — Review active blockers and rules before making changes',
+          '3. **TRACK** — Log significant decisions with rationale',
+          '4. **NOTE** — Capture observations, context, and open questions',
+          '',
+          '## Available Tools',
+          '',
+          'If PM Agent MCP is connected, use these tools:',
+          '',
+          '| Purpose | Tool |',
+          '|---------|------|',
+          '| Project snapshot | `pm_get_context` — decisions, blockers, notes, scope, architecture',
+          '| Blockers | `pm_get_blockers` — active and resolved blockers',
+          '| Decisions | `pm_log_decision` — log an ADR with body and links',
+          '| Notes | `pm_log_note` — quick capture with tags',
+          '| Scope | `pm_check_scope` — sprint impact and risk assessment',
+          '| Rules | `pm_enforce_rules` — evaluate rules against any context',
+          '| Scan | `pm_scan_codebase` — index file registry, deps, architecture',
+          '| Search | `pm_search_codebase` — full-text across code and docs',
+          '| Architecture | `pm_get_architecture` — entry points, layers, frameworks',
+          '| Analysis | `pm_understand_codebase` — deep semantic analysis',
+          '',
+          'Without MCP, use the CLI via `! pm <command>`.',
+          '',
+          '## Core Principles',
+          '',
+          '- Every decision has a rationale — log it',
+          '- Blockers are tracked until resolved — check them first',
+          '- Code changes are scoped with impact awareness — scan before big refactors',
+          '- Project rules are enforced at the hook level — violations are blocked automatically',
+          '',
+        ];
+        fs.writeFileSync(claudeMdPath, pmAgentInstructions.join('\n'), 'utf-8');
+      }
+    } catch {
+      // CLAUDE.md creation is best-effort
+    }
+
+    // Write .mcp.json for MCP server integration (per-project, local install)
+    try {
+      const mcpConfigPath = path.join(projectRoot, '.mcp.json');
+      if (!fs.existsSync(mcpConfigPath) || opts.force) {
+        let mcpConfig: Record<string, unknown> = {};
+        if (fs.existsSync(mcpConfigPath)) {
+          try {
+            mcpConfig = JSON.parse(fs.readFileSync(mcpConfigPath, 'utf-8'));
+          } catch { /* corrupt, overwrite */ }
+        }
+        mcpConfig.mcpServers = mcpConfig.mcpServers || {};
+        // Only add if not already configured
+        if (!(mcpConfig.mcpServers as Record<string, unknown>)['pm-agent']) {
+          // Try to find the MCP server binary in local node_modules
+          const localMcpPath = path.join(projectRoot, 'node_modules', '@gida-concept', 'pm-agent-mcp-server', 'dist', 'index.js');
+          const hasLocalInstall = fs.existsSync(localMcpPath);
+
+          if (hasLocalInstall) {
+            // Point at local install — survives offline, no npx
+            (mcpConfig.mcpServers as Record<string, unknown>)['pm-agent'] = {
+              command: 'node',
+              args: [localMcpPath],
+            };
+          } else {
+            // No local install — use npx (user can run npm install later)
+            (mcpConfig.mcpServers as Record<string, unknown>)['pm-agent'] = {
+              command: 'npx',
+              args: ['-y', '@gida-concept/pm-agent-mcp-server'],
+            };
+          }
+          fs.writeFileSync(mcpConfigPath, JSON.stringify(mcpConfig, null, 2) + '\n', 'utf-8');
+        }
+      }
+    } catch {
+      // .mcp.json creation is best-effort
+    }
 
     // Auto-install hooks into .claude/hooks/
     try {
@@ -206,9 +318,11 @@ export async function initCommand(opts: Record<string, any>): Promise<void> {
     }
 
     spinner.succeed(`PM Agent initialized for "${projectName}"`);
-    console.log(Colors.success(`\nConfig:  ${configPath}`));
-    console.log(Colors.success(`Database: ${dbPath}`));
-    console.log(Colors.success(`Rules:    ${rulesPath}`));
+    console.log(Colors.success(`\nConfig:    ${configPath}`));
+    console.log(Colors.success(`Database:  ${dbPath}`));
+    console.log(Colors.success(`Rules:     ${rulesPath}`));
+    console.log(Colors.success(`CLAUDE.md: ${path.join(projectRoot, 'CLAUDE.md')}`));
+    console.log(Colors.success(`MCP:       ${path.join(projectRoot, '.mcp.json')}`));
     console.log(Colors.info('\nRun `pm --help` to see available commands.'));
 
   } catch (err) {

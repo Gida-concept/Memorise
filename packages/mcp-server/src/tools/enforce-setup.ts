@@ -1,5 +1,17 @@
 import fs from 'fs';
 import path from 'path';
+
+/**
+ * Resolve the MCP server entry for a given package — prefers local install
+ * over npx so the server survives offline and doesn't hit native module issues.
+ */
+function resolveServerEntry(projectPath: string, packageName: string): { command: string; args: string[] } {
+  const localPath = path.join(projectPath, 'node_modules', ...packageName.split('/'), 'dist', 'index.js');
+  if (fs.existsSync(localPath)) {
+    return { command: 'node', args: [localPath] };
+  }
+  return { command: 'npx', args: ['-y', packageName] };
+}
 import { createRequire } from 'module';
 
 /**
@@ -115,8 +127,7 @@ function setupCursorProxy(projectPath: string): boolean {
   const mcpServers = (config.mcpServers as Record<string, unknown>) || {};
   mcpServers['pm-agent'] = {
     type: 'stdio',
-    command: 'npx',
-    args: ['-y', '@gida-concept/pm-agent-proxy'],
+    ...resolveServerEntry(projectPath, '@gida-concept/pm-agent-proxy'),
   };
   config.mcpServers = mcpServers;
 
@@ -144,8 +155,7 @@ function setupContinueProxy(projectPath: string): boolean {
   const mcpServers = (config.mcpServers as Record<string, unknown>) || {};
   mcpServers['pm-agent'] = {
     type: 'stdio',
-    command: 'npx',
-    args: ['-y', '@gida-concept/pm-agent-proxy'],
+    ...resolveServerEntry(projectPath, '@gida-concept/pm-agent-proxy'),
   };
   config.mcpServers = mcpServers;
 
@@ -173,8 +183,7 @@ function setupVSCodeProxy(projectPath: string): boolean {
   const mcp = (settings['github.copilot.chat.mcpServers'] as Record<string, unknown>) || {};
   mcp['pm-agent'] = {
     type: 'stdio',
-    command: 'npx',
-    args: ['-y', '@gida-concept/pm-agent-proxy'],
+    ...resolveServerEntry(projectPath, '@gida-concept/pm-agent-proxy'),
   };
   settings['github.copilot.chat.mcpServers'] = mcp;
 
@@ -194,11 +203,7 @@ function setupClaudeCodeProxy(projectPath: string): boolean {
   try {
     const config = JSON.parse(fs.readFileSync(mcpPath, 'utf-8'));
     const mcpServers = (config.mcpServers as Record<string, unknown>) || {};
-    mcpServers['pm-agent'] = {
-      type: 'stdio',
-      command: 'npx',
-      args: ['-y', '@gida-concept/pm-agent-proxy'],
-    };
+    mcpServers['pm-agent'] = resolveServerEntry(projectPath, '@gida-concept/pm-agent-proxy');
     config.mcpServers = mcpServers;
     fs.writeFileSync(mcpPath, JSON.stringify(config, null, 2) + '\n', 'utf-8');
     return true;
