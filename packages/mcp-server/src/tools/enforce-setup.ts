@@ -23,13 +23,18 @@ import { createRequire } from 'module';
  * This tool NEVER touches ~/.claude/settings.json — only project-level files.
  */
 
-interface HookConfig {
-  PreToolUse?: string;
-  SessionStart?: string;
+interface HookMatcherGroup {
+  matcher?: string | boolean;
+  command?: string;
+  hooks?: Array<{
+    type: string;
+    command: string;
+    args?: string[];
+  }>;
 }
 
 interface Settings {
-  hooks?: HookConfig;
+  hooks?: Record<string, HookMatcherGroup[]>;
   [key: string]: unknown;
 }
 
@@ -91,37 +96,17 @@ function copyHooksAndWriteConfig(projectPath: string, hooksSrcDir: string): Sett
     }
   }
 
-  // Claude Code v0.2+ requires array-of-matchers format
-  interface HookMatcherGroup {
-    matcher?: string;
-    hooks: Array<{
-      type: string;
-      command: string;
-      args?: string[];
-    }>;
-  }
-
   const hooks: Record<string, HookMatcherGroup[]> = settings.hooks || {};
   hooks.PreToolUse = [
     {
-      hooks: [
-        {
-          type: 'command',
-          command: 'node .claude/hooks/pre-tool-use.mjs',
-          args: [],
-        },
-      ],
+      matcher: true,
+      command: 'node .claude/hooks/pre-tool-use.mjs',
     },
   ];
   hooks.SessionStart = [
     {
-      hooks: [
-        {
-          type: 'command',
-          command: 'node .claude/hooks/session-start.mjs',
-          args: [],
-        },
-      ],
+      matcher: true,
+      command: 'node .claude/hooks/session-start.mjs',
     },
   ];
   settings.hooks = hooks;

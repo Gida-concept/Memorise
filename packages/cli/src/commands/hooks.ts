@@ -126,28 +126,17 @@ export function installHooks(projectPath: string): Record<string, unknown> {
   }
 
   // Write relative paths so the hooks survive project relocation
-  // Claude Code v0.2+ requires array-of-matchers format
   const hooks: Record<string, unknown[]> = (settings.hooks as Record<string, unknown[]>) || {};
   hooks.PreToolUse = [
     {
-      hooks: [
-        {
-          type: 'command',
-          command: 'node .claude/hooks/pre-tool-use.mjs',
-          args: [],
-        },
-      ],
+      matcher: true,
+      command: 'node .claude/hooks/pre-tool-use.mjs',
     },
   ];
   hooks.SessionStart = [
     {
-      hooks: [
-        {
-          type: 'command',
-          command: 'node .claude/hooks/session-start.mjs',
-          args: [],
-        },
-      ],
+      matcher: true,
+      command: 'node .claude/hooks/session-start.mjs',
     },
   ];
   settings.hooks = hooks;
@@ -166,8 +155,9 @@ function getSettingsPath(projectPath?: string): string {
 }
 
 interface HookMatcherGroup {
-  matcher?: string;
-  hooks: Array<{
+  matcher?: string | boolean;
+  command?: string;
+  hooks?: Array<{
     type: string;
     command?: string;
     args?: string[];
@@ -187,11 +177,19 @@ interface Settings {
 function hasPmAgentHook(groups: HookMatcherGroup[] | undefined): boolean {
   if (!groups || !Array.isArray(groups)) return false;
   for (const group of groups) {
-    if (!group.hooks || !Array.isArray(group.hooks)) continue;
-    for (const hook of group.hooks) {
-      const cmd = hook.command || '';
-      if (cmd.includes('pm-agent-hooks') || cmd.includes('pre-tool-use.mjs') || cmd.includes('session-start.mjs')) {
+    // Check flat format (command at group level)
+    if (group.command) {
+      if (group.command.includes('pre-tool-use.mjs') || group.command.includes('session-start.mjs')) {
         return true;
+      }
+    }
+    // Check nested format (hooks array with type/command)
+    if (group.hooks && Array.isArray(group.hooks)) {
+      for (const hook of group.hooks) {
+        const cmd = hook.command || '';
+        if (cmd.includes('pre-tool-use.mjs') || cmd.includes('session-start.mjs')) {
+          return true;
+        }
       }
     }
   }
@@ -205,9 +203,13 @@ function getHookCommands(groups: HookMatcherGroup[] | undefined): string[] {
   if (!groups || !Array.isArray(groups)) return [];
   const cmds: string[] = [];
   for (const group of groups) {
-    if (!group.hooks || !Array.isArray(group.hooks)) continue;
-    for (const hook of group.hooks) {
-      if (hook.command) cmds.push(hook.command);
+    // Check flat format (command at group level)
+    if (group.command) cmds.push(group.command);
+    // Check nested format (hooks array)
+    if (group.hooks && Array.isArray(group.hooks)) {
+      for (const hook of group.hooks) {
+        if (hook.command) cmds.push(hook.command);
+      }
     }
   }
   return cmds;
@@ -314,8 +316,8 @@ export async function hooksRemoveCommand(projectPath?: string): Promise<void> {
   }
 
   const hooks = settings.hooks || {};
-  const hadPreToolUse = isPmAgentHook(hooks.PreToolUse);
-  const hadSessionStart = isPmAgentHook(hooks.SessionStart);
+  const hadPreToolUse = hasPmAgentHook(hooks.PreToolUse);
+  const hadSessionStart = hasPmAgentHook(hooks.SessionStart);
 
   if (!hadPreToolUse && !hadSessionStart) {
     console.log(Colors.warning('\nNo PM Agent hooks found in configuration.'));
