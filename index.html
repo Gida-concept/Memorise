@@ -226,33 +226,39 @@
     }
 
     .nav-menu{
-      position:fixed;inset:0;
+      position:absolute;top:100%;left:0;right:0;
       background:rgba(8,8,10,0.97);
       backdrop-filter:blur(24px);
       -webkit-backdrop-filter:blur(24px);
-      display:flex;flex-direction:column;align-items:center;justify-content:center;
-      gap:1.75rem;
+      display:flex;flex-direction:column;align-items:center;
+      gap:0.75rem;
+      padding:1.25rem 1rem 1.5rem;
       opacity:0;pointer-events:none;
-      transition:opacity 0.35s var(--ease);
+      transition:opacity 0.3s var(--ease);
       z-index:105;
+      max-height:calc(100vh - 56px);
+      overflow-y:auto;
     }
     .nav-menu.open{
       opacity:1;pointer-events:auto;
     }
     .nav-menu a{
-      font-size:1.15rem;font-weight:500;
+      font-size:1rem;font-weight:500;
       color:var(--text-mid);
+      padding:0.5rem 0;
       transition:color 0.2s;
     }
     .nav-menu a:hover{color:var(--text)}
     .nav-menu .nav-cta{
-      margin-top:0.5rem;
-      padding:0.6rem 1.5rem;
+      margin-top:0.25rem;
+      padding:0.65rem 1.5rem;
       border-radius:var(--radius-md);
       background:var(--orange);
       color:#fff !important;
       font-weight:600;font-size:0.9rem;
       transition:background 0.2s, transform 0.2s;
+      text-align:center;
+      width:100%;
     }
     .nav-menu .nav-cta:hover{
       background:var(--orange-bright);
@@ -1140,6 +1146,13 @@
       var toggle = document.getElementById('menuToggle');
       var menu = document.getElementById('navMenu');
 
+      function closeMenu() {
+        menu.classList.remove('open');
+        toggle.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        document.body.style.overflow = '';
+      }
+
       toggle.addEventListener('click', function() {
         var open = menu.classList.toggle('open');
         toggle.classList.toggle('open', open);
@@ -1149,12 +1162,14 @@
 
       // Close menu on link click
       menu.querySelectorAll('a').forEach(function(a) {
-        a.addEventListener('click', function() {
-          menu.classList.remove('open');
-          toggle.classList.remove('open');
-          toggle.setAttribute('aria-expanded', 'false');
-          document.body.style.overflow = '';
-        });
+        a.addEventListener('click', closeMenu);
+      });
+
+      // Close menu on Escape
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && menu.classList.contains('open')) {
+          closeMenu();
+        }
       });
 
       // ── Sticky nav border ──
