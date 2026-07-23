@@ -59,18 +59,28 @@ function resolveHooksSrcPath(): string | null {
     return monorepoPath;
   }
 
-  // Installed package in node_modules
+  // Installed package in node_modules — resolve from CLI location
   try {
     const require = createRequire(modulePath);
-    const resolved = require.resolve('@gida-concept/pm-agent-hooks/src/pre-tool-use.mjs');
-    if (resolved) {
-      const srcDir = path.dirname(resolved);
-      if (fs.existsSync(path.join(srcDir, 'hook-utils.mjs'))) {
-        return srcDir;
-      }
+    const resolved = require.resolve('@gida-concept/pm-agent-hooks/package.json');
+    const pkgDir = path.dirname(resolved);
+    const srcDir = path.join(pkgDir, 'src');
+    if (fs.existsSync(path.join(srcDir, 'hook-utils.mjs'))) {
+      return srcDir;
     }
   } catch {
-    // Not found via require
+    // Not found via require from CLI location — try cwd
+  }
+
+  // Fallback: resolve from cwd (npx case — CLI is in npm cache, hooks in user's project)
+  try {
+    const cwd = process.cwd();
+    const localPath = path.join(cwd, 'node_modules', '@gida-concept', 'pm-agent-hooks', 'src');
+    if (fs.existsSync(path.join(localPath, 'hook-utils.mjs'))) {
+      return localPath;
+    }
+  } catch {
+    // Not found
   }
 
   return null;
