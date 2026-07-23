@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * PM Agent PreToolUse Hook — ZERO-STATE GATEKEEPER
+ * PM Agent PreToolUse Hook — ZERO-STATE GATEKEEPER + RULES ENFORCEMENT
  *
  * Runs before EVERY Claude Code tool call.
  *
@@ -10,28 +10,31 @@
  * │ EVERY tool call is evaluated INDEPENDENTLY — zero session    │
  * │ state carries over between hook invocations.                 │
  * │                                                               │
- * │ The ONLY tools that pass through:                             │
- * │   • pm_get_context — this is what sets contextChecked         │
- * │   • All other pm_* MCP tools                                  │
- * │   • AskUserQuestion — needed for user interaction             │
+ * │ The ONLY tools that pass through without context:             │
  * │   • SessionStart hook (tool === undefined)                    │
+ * │   • AskUserQuestion — needed for user interaction             │
+ * │   • pm_get_context — this is what sets contextChecked         │
+ * │   • All other pm_* MCP tools (blocked from setting context)   │
  * │                                                               │
- * │ EVERY OTHER TOOL (Read, Write, Edit, Bash, Glob, Grep,       │
- * │ TaskCreate, WebSearch, MCP tools, etc.) is BLOCKED unless    │
- * │ contextChecked is true (set by pm_get_context earlier in     │
- * │ this same batch).                                             │
+ * │ EVERY OTHER TOOL is BLOCKED unless contextChecked is true.    │
  * │                                                               │
- * │ contextChecked is RESET TO FALSE AFTER every hook invocation EXCEPT   │
- * │ pm_get_context itself (which sets it true for the rest of the batch). │
- * │ This means:                                                           │
- * │   • pm_get_context → contextChecked = true, subsequent tools pass     │
- * │   • All other pm_* tools → contextChecked = false (clean slate)       │
- * │   • Non-PM-agent tools pass only if contextChecked is true            │
- * │   • Response boundaries CANNOT leak — ending with pm_log_note/reset   │
- * │     wipes contextChecked, so next response starts empty               │
+ * │ BOTH flags are RESET after every hook invocation              │
+ * │ EXCEPT the tool that sets them. This means:                   │
+ * │   • pm_get_context → contextChecked = true, rest of batch OK  │
+ * │   • pm_log_decision → decisionLogged = true, rest of batch OK │
+ * │   • All other pm_* tools reset BOTH flags (clean slate)       │
+ * │   • Non-PM-agent tools pass only if BOTH flags are true       │
+ * │   • Response boundaries CANNOT leak — every response starts   │
+ * │     with both flags false, must call pm_get_context and        │
+ * │     pm_log_decision fresh every time.                         │
  * │                                                               │
- * │ Write/destructive tools (Edit, Write, Bash, Delete)           │
- * │ additionally require pm_log_decision at least once.           │
+ * │ Write/destructive tools additionally require pm_log_decision  │
+ * │ in the SAME response — it's not persistent across responses.  │
+ * │                                                               │
+ * │ RULES ENGINE: All tools (including pm_*) are evaluated        │
+ * │ against the rules.toml file on every single call. If a hard   │
+ * │ rule fires, the tool is blocked. If a soft/info rule fires,   │
+ * │ the user sees the notification/suggestion.                    │
  * └───────────────────────────────────────────────────────────────┘
  *
  * Claude Code hook contract:
@@ -41,13 +44,19 @@
  */
 
 // ---------------------------------------------------------------------------
+// Dependencies
+// ---------------------------------------------------------------------------
+
+import { evaluateRules, wrapResult } from './hook-utils.mjs';
+
+// ---------------------------------------------------------------------------
 // Module-level state (persists within a single Node.js process)
 // ---------------------------------------------------------------------------
 
 /** Whether pm_get_context has been set in this batch. Reset to false at every hook return. */
 let contextChecked = false;
 
-/** Whether pm_log_decision has been called at least once this session. */
+/** Whether pm_log_decision has been called in this batch. Reset to false at every hook return. */
 let decisionLogged = false;
 
 // ---------------------------------------------------------------------------
@@ -138,8 +147,28 @@ Required:  pm_log_decision
 Or CLI:    ! pm log-decision "title" "body"`;
 
 // ---------------------------------------------------------------------------
-// Guards — no global initialization needed; contextChecked starts false
+// Helper: evaluate rules and block if hard rule fires
 // ---------------------------------------------------------------------------
+
+/**
+ * Evaluate PM Agent rules for the current tool call.
+ * Returns { blocked: true, reason } if a hard rule blocks, or
+ * { blocked: true, reason } if a soft/info rule fires a warning,
+ * or {} if no rules fire or rules are disabled.
+ */
+function checkRules(toolName, toolInput) {
+  try {
+    const ruleResult = evaluateRules(toolName, toolInput || {});
+    const wrapped = wrapResult(ruleResult.blocked, ruleResult.actions);
+    if (wrapped.autoApproval === false) {
+      return { blocked: true, reason: wrapped.reason };
+    }
+    return { blocked: false };
+  } catch (e) {
+    console.error('[PM Agent] Rule evaluation error:', e.message);
+    return { blocked: false };
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Main hook
@@ -157,21 +186,29 @@ export async function preToolUse({ tool, input } = {}) {
       return {};
     }
 
-    // Step 3: PM Agent MCP tools — track decision logging
+    // Step 3: PM Agent MCP tools — track state and evaluate rules
     if (tool.startsWith('pm_') || tool.startsWith('pm-')) {
+      // Track pm_log_decision calls
       if (tool === 'pm_log_decision') {
         decisionLogged = true;
       }
-      // pm_get_context sets contextChecked so subsequent tools in this batch pass
+      // pm_get_context sets contextChecked for subsequent tools in this batch
       if (tool === 'pm_get_context') {
         contextChecked = true;
       }
-      // CRITICAL: pm_* tools that are NOT pm_get_context do NOT leave contextChecked
-      // true. This prevents state bleed across response boundaries. If the AI ends
-      // a response with pm_log_note, contextChecked stays whatever it was (false
-      // or unchanged). So the next response starts fresh.
+      // CRITICAL: every non-state-setting pm_* tool wipes both state flags
+      // to prevent state bleed across response boundaries. If the AI ends a
+      // response with pm_log_note, both flags are false for the next response.
       if (tool !== 'pm_get_context') {
         contextChecked = false;
+      }
+      if (tool !== 'pm_log_decision') {
+        decisionLogged = false;
+      }
+      // Evaluate rules against this pm_* tool call
+      const ruled = checkRules(tool, input);
+      if (ruled.blocked) {
+        return { autoApproval: false, reason: ruled.reason };
       }
       return {};
     }
@@ -187,10 +224,17 @@ export async function preToolUse({ tool, input } = {}) {
           if (pmTool === 'pm_get_context') {
             contextChecked = true;
           }
-          // Same principle: non-pm_get_context pm_* tools reset context
-          // so next response starts clean
+          // Same principle: non-state-setting pm_* tools reset both flags
           if (pmTool !== 'pm_get_context') {
             contextChecked = false;
+          }
+          if (pmTool !== 'pm_log_decision') {
+            decisionLogged = false;
+          }
+          // Evaluate rules against the detected pm_* tool call
+          const ruled = checkRules(pmTool, input);
+          if (ruled.blocked) {
+            return { autoApproval: false, reason: ruled.reason };
           }
           return {};
         }
@@ -208,7 +252,13 @@ export async function preToolUse({ tool, input } = {}) {
       };
     }
 
-    // Step 6: Decision check — write tools need pm_log_decision
+    // Step 6: Evaluate rules for this non-PM-agent tool call
+    const ruled = checkRules(tool, input);
+    if (ruled.blocked) {
+      return { autoApproval: false, reason: ruled.reason };
+    }
+
+    // Step 7: Decision check — write tools need pm_log_decision
     if (WRITE_TOOLS.has(tool) && !decisionLogged) {
       return {
         autoApproval: false,
@@ -216,10 +266,11 @@ export async function preToolUse({ tool, input } = {}) {
       };
     }
 
-    // Step 7: Allow through — reset contextChecked so the next response
+    // Step 8: Allow through — reset both flags so the next response
     // starts clean. This non-PM-agent tool consumed the context; the AI
-    // must call pm_get_context again in the next response.
+    // must call pm_get_context and pm_log_decision again in the next response.
     contextChecked = false;
+    decisionLogged = false;
     return {};
   } catch (e) {
     // Never crash Claude Code from a hook

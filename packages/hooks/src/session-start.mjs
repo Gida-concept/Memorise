@@ -53,9 +53,9 @@ You are REQUIRED to follow PM Agent workflow on EVERY response. These are not su
 ▸ Without pm_get_context, ALL Write, Read, Bash, Edit, and MCP tool calls are BLOCKED.
 ▸ Only AskUserQuestion and pm_* tools are allowed to pass through.
 
-DECISION LOGGING IS MANDATORY:
-▸ pm_log_decision must be called before ANY write/destructive tool (Write, Edit, Bash, Delete, Rename, Move, NotebookEdit).
-▸ The hook WILL BLOCK these tools if no decision has been logged in the session.
+DECISION LOGGING IS PER-RESPONSE (NOT SESSION-PERSISTENT):
+▸ pm_log_decision must be called in EVERY response before any write/destructive tool.
+▸ The hook WILL BLOCK write tools if pm_log_decision hasn't been called in THIS response.
 ▸ Log ALL architectural decisions, feature implementations, and configuration changes.
 ▸ Not logging a decision before modifying files is a VIOLATION.
 
