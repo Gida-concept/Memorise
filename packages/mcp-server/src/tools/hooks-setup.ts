@@ -16,13 +16,18 @@ import { createRequire } from 'module';
  * local settings file.
  */
 
-interface HookConfig {
-  PreToolUse?: string;
-  SessionStart?: string;
+interface HookMatcherGroup {
+  matcher?: string;
+  hooks: Array<{
+    type: string;
+    command: string;
+    args?: string[];
+    [key: string]: unknown;
+  }>;
 }
 
 interface Settings {
-  hooks?: HookConfig;
+  hooks?: Record<string, HookMatcherGroup[]>;
   [key: string]: unknown;
 }
 
@@ -99,11 +104,32 @@ function copyHooksAndWriteConfig(projectPath: string, hooksSrcDir: string): Sett
     }
   }
 
-  const hooks: HookConfig = settings.hooks || {};
+  const hooks: Record<string, HookMatcherGroup[]> = settings.hooks || {};
 
   // Set PM Agent hooks with relative paths
-  hooks.PreToolUse = 'node .claude/hooks/pre-tool-use.mjs';
-  hooks.SessionStart = 'node .claude/hooks/session-start.mjs';
+  // Claude Code v0.2+ requires array-of-matchers format
+  hooks.PreToolUse = [
+    {
+      hooks: [
+        {
+          type: 'command',
+          command: 'node .claude/hooks/pre-tool-use.mjs',
+          args: [],
+        },
+      ],
+    },
+  ];
+  hooks.SessionStart = [
+    {
+      hooks: [
+        {
+          type: 'command',
+          command: 'node .claude/hooks/session-start.mjs',
+          args: [],
+        },
+      ],
+    },
+  ];
 
   settings.hooks = hooks;
 
