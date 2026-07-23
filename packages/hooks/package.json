@@ -11,8 +11,11 @@
   },
   "type": "module",
   "exports": {
+    ".": "./src/session-start.mjs",
     "./pre-tool-use": "./src/pre-tool-use.mjs",
-    "./session-start": "./src/session-start.mjs"
+    "./session-start": "./src/session-start.mjs",
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
   },
   "bin": {
     "pm-hook-pre-tool-use": "./src/pre-tool-use.mjs",

@@ -37,35 +37,28 @@ interface Settings {
  * Resolve the path to the hooks source directory.
  */
 function resolveHooksSrcPath(startFrom: string): string | null {
-  const searchDirs = [
-    startFrom,
-    path.resolve(startFrom, '..'),
-    path.resolve(startFrom, '..', '..'),
-    process.cwd(),
-  ];
-
-  for (const dir of searchDirs) {
-    try {
-      const require = createRequire(path.join(dir, 'noop.mjs'));
-      const resolved = require.resolve('@gida-concept/pm-agent-hooks');
-      if (resolved) {
-        let pkgDir = path.dirname(resolved);
-        while (pkgDir !== path.dirname(pkgDir)) {
-          if (fs.existsSync(path.join(pkgDir, 'package.json'))) {
-            const pkg = JSON.parse(fs.readFileSync(path.join(pkgDir, 'package.json'), 'utf-8'));
-            if (pkg.name === '@gida-concept/pm-agent-hooks') {
-              const srcDir = path.join(pkgDir, 'src');
-              if (fs.existsSync(path.join(srcDir, 'hook-utils.mjs'))) {
-                return srcDir;
-              }
-            }
-          }
-          pkgDir = path.dirname(pkgDir);
-        }
-      }
-    } catch {
-      continue;
+  // 1. Resolve via package.json
+  try {
+    const require = createRequire(path.join(startFrom, 'noop.mjs'));
+    const pkgJsonPath = require.resolve('@gida-concept/pm-agent-hooks/package.json');
+    const pkgDir = path.dirname(pkgJsonPath);
+    const srcDir = path.join(pkgDir, 'src');
+    if (fs.existsSync(path.join(srcDir, 'hook-utils.mjs'))) {
+      return srcDir;
     }
+  } catch {
+    // Fallback below
+  }
+
+  // 2. Try direct node_modules path from cwd
+  try {
+    const cwd = process.cwd();
+    const localPath = path.join(cwd, 'node_modules', '@gida-concept', 'pm-agent-hooks', 'src');
+    if (fs.existsSync(path.join(localPath, 'hook-utils.mjs'))) {
+      return localPath;
+    }
+  } catch {
+    // Not found
   }
 
   return null;

@@ -45,30 +45,39 @@ function resolveHooksPackagePath(): string | null {
  * Priority:
  * 1. Monorepo dev: packages/hooks/src/ relative to CLI location
  * 2. Installed package: node_modules/@gida-concept/pm-agent-hooks/src/
+ * 3. Walk up to find it from require
  */
 function resolveHooksSrcPath(): string | null {
   const modulePath = path.dirname(new URL(import.meta.url).pathname);
 
-  // Monorepo dev: walk up from CLI module to find packages/hooks/src
-  // CLI is at packages/cli/src/commands/hooks.ts (or dist/commands/hooks.js)
-  // Hooks src is at packages/hooks/src/
+  // 1. Monorepo dev: walk up from CLI module to find packages/hooks/src
   const monorepoPath = path.resolve(modulePath, '..', '..', '..', '..', 'packages', 'hooks', 'src');
   if (fs.existsSync(path.join(monorepoPath, 'hook-utils.mjs'))) {
     return monorepoPath;
   }
 
-  // Installed package in node_modules
+  // 2. Resolve via require using package.json export
   try {
     const require = createRequire(modulePath);
-    const resolved = require.resolve('@gida-concept/pm-agent-hooks/src/pre-tool-use.mjs');
-    if (resolved) {
-      const srcDir = path.dirname(resolved);
-      if (fs.existsSync(path.join(srcDir, 'hook-utils.mjs'))) {
-        return srcDir;
-      }
+    const pkgJsonPath = require.resolve('@gida-concept/pm-agent-hooks/package.json');
+    const pkgDir = path.dirname(pkgJsonPath);
+    const srcDir = path.join(pkgDir, 'src');
+    if (fs.existsSync(path.join(srcDir, 'hook-utils.mjs'))) {
+      return srcDir;
     }
   } catch {
-    // Not found via require
+    // Fallback below
+  }
+
+  // 3. Try direct node_modules path from cwd
+  try {
+    const cwd = process.cwd();
+    const localPath = path.join(cwd, 'node_modules', '@gida-concept', 'pm-agent-hooks', 'src');
+    if (fs.existsSync(path.join(localPath, 'hook-utils.mjs'))) {
+      return localPath;
+    }
+  } catch {
+    // Not found
   }
 
   return null;
