@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
+import { createRequire } from 'module';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema, ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
+const { version } = createRequire(import.meta.url)('../package.json');
 
 // Tool handlers
 import { handleGetContext } from './tools/get-context.js';
@@ -341,31 +343,47 @@ const HANDLERS: Record<string, (args: Record<string, unknown>) => Promise<Record
 const server = new Server(
   ({
     name: 'pm-agent-mcp',
-    version: '0.2.0',
-    instructions: `You are connected to **PM Agent** — a project management context server for AI coding assistants.
+    version,
+    instructions: `╔══════════════════════════════════════════════════════════════════╗
+║  PM Agent — GATEKEEPER MODE ACTIVE                             ║
+║  This is NOT optional. You MUST follow the required workflow.   ║
+║  The PreToolUse hook WILL BLOCK WRITES if you skip this.       ║
+╚══════════════════════════════════════════════════════════════════╝
 
-**PM Agent — Required Behavior (ENFORCED):**
+**MANDATORY WORKFLOW — enforced by gatekeeper:**
 
-Hook monitoring is ACTIVE — every destructive operation is checked against PM Agent rules. Violating a hard rule will block your tool calls.
+You CANNOT write files, run commands, or modify the project
+until you call \`pm_get_context\` to load the current project state.
 
-You MUST follow this sequence on EVERY interaction:
-1. **START** — Call \`pm_get_context\` to learn current project state
-2. **CHECK** — Call \`pm_get_blockers\` and \`pm_enforce_rules\` before any work
-3. **LOG** — After significant decisions, call \`pm_log_decision\`
-4. **NOTE** — Call \`pm_get_notes\` when starting something new
+Step 1 — CALL \`pm_get_context\` FIRST (required, non-optional)
+Step 2 — Review: decisions, blockers, notes, architecture
+Step 3 — Only then make changes. The gatekeeper will allow writes.
 
-Failure to follow this sequence will result in blocked operations and user rejection.
+After the initial context load, you still MUST:
+  • Call \`pm_enforce_rules\` before dangerous operations
+  • Log decisions with \`pm_log_decision\`
+  • Check blockers with \`pm_get_blockers\`
 
-**Auto-enforcement is active** — rules are checked automatically on every tool call. If a \`hard\` rule's trigger matches the tool and arguments, the call is blocked before execution. Write rules with expression-compatible triggers (e.g. \`tool_name == 'pm_log_decision'\`) to take full advantage of auto-enforcement.
+**Why this is required:**
+The PreToolUse gatekeeper hook tracks whether you have called
+\`pm_get_context\` this session. If you attempt any write/destructive
+tool without it, the hook returns an educational block message.
 
-**PM Agent provides:**
-- **Decisions** — architecture decision records with rationale and links
-- **Blockers** — active and resolved blockers with severity
-- **Notes** — tagged observations and project insights
-- **Scope** — sprint capacity and risk assessment
-- **Rules** — hard/soft enforcement rules that guard project behavior
-- **Codebase scanning** — file registry, dependencies, architecture overview
-- **Dependency graphs** — file-level dependency and impact analysis`,
+**Available PM Agent MCP tools:**
+  • \`pm_get_context\`      — Full project snapshot (REQUIRED first call)
+  • \`pm_get_blockers\`     — Active blockers list
+  • \`pm_enforce_rules\`    — Check rules before operations
+  • \`pm_check_scope\`      — Sprint impact assessment
+  • \`pm_log_decision\`     — Log an ADR
+  • \`pm_log_note\`         — Quick capture with tags
+  • \`pm_scan_codebase\`    — Re-index project structure
+  • \`pm_search_codebase\`  — Full-text search
+  • \`pm_get_architecture\` — Entry points, layers, frameworks
+  • \`pm_understand_codebase\` — Deep semantic analysis
+
+For the CLI: run \`! pm <command>\` in Bash.
+
+The gatekeeper is enforced at the platform level — you cannot bypass it.`,
   }) as any,
   { capabilities: { tools: {} } },
 );

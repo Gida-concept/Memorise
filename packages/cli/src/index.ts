@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 
+import { createRequire } from 'module';
 import { Command } from 'commander';
 import { initCommand } from './commands/init.js';
+const { version } = createRequire(import.meta.url)('../package.json');
 import { logCommand } from './commands/log.js';
 import { blockersCommand } from './commands/blockers.js';
 import { noteCommand } from './commands/note.js';
@@ -26,7 +28,7 @@ const program = new Command();
 program
   .name('pm')
   .description('PM Agent -- AI-native product management for developers')
-  .version('0.2.0')
+  .version(version)
   .option('--config <path>', 'Path to config file')
   .option('-p, --project <name>', 'Project name')
   .option('--verbose', 'Detailed output with debug info', false)

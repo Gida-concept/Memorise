@@ -1,9 +1,14 @@
 {
   "name": "@gida-concept/pm-agent-hooks",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "PM Agent Claude Code hooks — enforce rules at the client level across all tool calls",
-  "files": ["src/*.mjs", "README.md"],
-  "publishConfig": { "access": "public" },
+  "files": [
+    "src/*.mjs",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "exports": {
     "./pre-tool-use": "./src/pre-tool-use.mjs",

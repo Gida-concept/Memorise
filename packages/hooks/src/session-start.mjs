@@ -3,8 +3,9 @@
 /**
  * PM Agent SessionStart Hook
  *
- * Runs once when a Claude Code session starts. Loads PM Agent context,
- * displays active rules, and sets environment variables.
+ * Runs once when a Claude Code session starts. Injects ironclad instructions
+ * into the system prompt — the AI reads these BEFORE EVERY RESPONSE because
+ * they're part of its core system prompt.
  *
  * Claude Code hook contract:
  *   export async function sessionStart() -> { instructions?, environment? }
@@ -18,39 +19,50 @@ export async function sessionStart() {
 
     const config = resolveConfig();
 
-    // Load active rules using the inline TOML parser
-    let rulesList = '(no rules loaded)';
+    // Load active rules
+    let rulesBlock = '(no rules loaded)';
+    let projectName = 'this project';
 
     try {
       if (config?.rules?.config_path) {
         const rules = loadRules(config.rules.config_path);
         const activeRules = rules.filter(r => r.enabled !== false);
         if (activeRules.length > 0) {
-          rulesList = activeRules
+          rulesBlock = activeRules
             .map(r => `  [${r.severity}] ${r.name}: ${r.description || r.trigger}`)
             .join('\n');
         } else {
-          rulesList = '  (no active rules)';
+          rulesBlock = '  (no active rules)';
         }
       }
+      if (config?.project?.name) {
+        projectName = config.project.name;
+      }
     } catch {
-      // Rule loading failed silently
+      // Best-effort
     }
 
     return {
-      instructions: `[PM Agent - ACTIVE]
-PM Agent rules are enforced for this session. The PreToolUse hook checks every destructive operation.
+      instructions: `=== PM AGENT — MANDATORY PROJECT ENFORCEMENT ===
+Project: ${projectName}
 
-Active rules:
-${rulesList}
+You are REQUIRED to follow PM Agent workflow on EVERY interaction. These are not suggestions — they are enforced rules.
 
-You MUST:
-1. BEFORE changing anything — call \`pm_get_context\` to understand current project state
-2. BEFORE finalizing — call \`pm_enforce_rules\` to verify no violations
-3. AFTER decisions — call \`pm_log_decision\` to record them
-4. REVIEW notes — call \`pm_get_notes\` before starting new work`,
+▸ BEFORE every response, you MUST check PM Agent context.
+▸ BEFORE writing any file or running any command, call \`pm_get_context\` or run \`pm context\` to understand current state.
+▸ If you attempt a write operation without checking context first, the PreToolUse hook WILL BLOCK IT.
+▸ Log ALL decisions with \`pm_log_decision\` — not logging a decision is a violation.
+▸ Check active blockers with \`pm_get_blockers\` before starting new work.
+
+Active project rules:
+${rulesBlock}
+
+FAILURE TO FOLLOW THIS WORKFLOW WILL RESULT IN BLOCKED OPERATIONS.
+The PreToolUse hook enforces this at the tool-call level — you cannot bypass it.`,
       environment: {
         PM_AGENT_ACTIVE: 'true',
+        PM_AGENT_ENFORCED: 'true',
+        PM_AGENT_PROJECT: projectName,
         PM_AGENT_CONFIG: config?.rules?.config_path || '',
       },
     };

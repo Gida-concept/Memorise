@@ -202,7 +202,7 @@ export default tseslint.config(
   // ─── package.json ───
   const pkgJson: Record<string, unknown> = {
     name: projectDirName,
-    version: '0.2.0',
+    version: '0.1.0',
     private: true,
     type: 'module',
     scripts,

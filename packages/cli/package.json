@@ -1,6 +1,6 @@
 {
   "name": "@gida-concept/pm-agent-cli",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "PM Agent CLI — terminal interface for project memory and rules",
   "files": [
     "dist",
@@ -28,7 +28,7 @@
     "dev": "tsup --watch"
   },
   "dependencies": {
-    "@gida-concept/pm-agent-core": "^0.2.0",
+    "@gida-concept/pm-agent-core": "^0.2.1",
     "commander": "^12.0.0",
     "chalk": "^5.3.0",
     "ora": "^8.0.0",

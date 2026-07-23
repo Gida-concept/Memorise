@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 
+import { createRequire } from 'module';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+const { version } = createRequire(import.meta.url)('../package.json');
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
@@ -29,7 +31,7 @@ function textContent(text: string): { type: 'text'; text: string } {
 const server = new Server(
   ({
     name: 'pm-agent-proxy',
-    version: '0.2.0',
+    version,
     instructions: `You are connected to **PM Agent Proxy** — an enforcement layer in front of the real PM Agent MCP server.
 
 The proxy evaluates **PM Agent rules** before every tool call and blocks any operation that violates a hard rule.
