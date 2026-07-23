@@ -8,18 +8,40 @@
 npm install -g @gida-concept/pm-agent-cli
 ```
 
-Or run directly:
+Or run directly with npx:
 
 ```bash
 npx @gida-concept/pm-agent-cli
 ```
 
-## Usage
+## Quick Start
+
+### From your terminal (recommended)
+
+```bash
+cd your-project
+npx -y @gida-concept/pm-agent-cli init
+```
+
+This works anywhere — your shell has the native build tools needed by `better-sqlite3`.
+
+### From inside a coding CLI (Claude Code, Cursor, etc.)
+
+The coding CLI's sandbox may not compile native modules correctly. Install locally first:
+
+```bash
+! npm install -D @gidea-concept/pm-agent-cli
+! npx pm init
+```
+
+Once `pm init` is done, everything (config, DB, hooks) lives in `.pm-agent/` at your project root — no global install needed.
+
+### Usage
 
 ### Quick Start
 
 ```bash
-# Initialize PM Agent in a project
+# Initialize PM Agent in a project (if installed globally)
 pm init --name "my-project"
 
 # Log a decision

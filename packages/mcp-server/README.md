@@ -8,13 +8,31 @@
 npm install -g @gida-concept/pm-agent-mcp-server
 ```
 
-Or run directly:
+Or run directly with npx:
 
 ```bash
 npx @gida-concept/pm-agent-mcp-server
 ```
 
-## Overview
+## Initial Setup
+
+PM Agent stores its config, database, and hooks inside `.pm-agent/` at your project root — no global state.
+
+### From your terminal
+
+```bash
+cd your-project
+npx -y @gida-concept/pm-agent-cli init
+```
+
+### From inside a coding CLI (Claude Code, Cursor, etc.)
+
+The coding CLI's sandbox may not compile native modules correctly. Install locally first:
+
+```bash
+! npm install -D @gidea-concept/pm-agent-cli
+! npx pm init
+```
 
 This MCP server provides AI agents with structured access to a project's PM context: decisions, blockers, notes, tasks, scope snapshots, rules enforcement, codebase scanning, dependency analysis, and impact assessment.
 
