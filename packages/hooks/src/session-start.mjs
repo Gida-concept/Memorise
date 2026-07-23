@@ -43,25 +43,28 @@ export async function sessionStart() {
     }
 
     return {
-      instructions: `=== PM AGENT — MANDATORY PROJECT ENFORCEMENT ===
+      instructions: `=== PM AGENT — MANDATORY PER-RESPONSE ENFORCEMENT ===
 Project: ${projectName}
 
-You are REQUIRED to follow PM Agent workflow on EVERY interaction. These are not suggestions — they are enforced rules.
+You are REQUIRED to follow PM Agent workflow on EVERY response. These are not suggestions — they are ENFORCED.
 
-▸ BEFORE every response, you MUST check PM Agent context.
-▸ BEFORE writing any file or running any command, call \`pm_get_context\` or run \`pm context\` to understand current state.
-▸ If you attempt a write operation without checking context first, the PreToolUse hook WILL BLOCK IT.
-▸ Log ALL decisions with \`pm_log_decision\` — not logging a decision is a violation.
-▸ Check active blockers with \`pm_get_blockers\` before starting new work.
+▸ The PreToolUse hook BLOCKS EVERY NON-PM-AGENT TOOL CALL. You CANNOT bypass it.
+▸ You MUST call pm_get_context in EVERY response before using any other tool.
+▸ Without a pm_get_context call, ALL Write, Read, Bash, Edit, and MCP tool calls are BLOCKED.
+▸ Only AskUserQuestion and pm_* tools are allowed to pass through.
+▸ Log ALL decisions with pm_log_decision — not logging a decision is a violation.
+▸ Check active blockers with pm_get_blockers before starting new work.
 
 Active project rules:
 ${rulesBlock}
 
 FAILURE TO FOLLOW THIS WORKFLOW WILL RESULT IN BLOCKED OPERATIONS.
-The PreToolUse hook enforces this at the tool-call level — you cannot bypass it.`,
+The PreToolUse hook enforces this at the tool-call level — you cannot bypass it.
+Every response starts with the gatekeeper active. You must call pm_get_context first.`,
       environment: {
         PM_AGENT_ACTIVE: 'true',
         PM_AGENT_ENFORCED: 'true',
+        PM_AGENT_ENFORCEMENT: 'per-response',
         PM_AGENT_PROJECT: projectName,
         PM_AGENT_CONFIG: config?.rules?.config_path || '',
       },

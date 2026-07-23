@@ -1,21 +1,20 @@
 #!/usr/bin/env node
 
 /**
- * PM Agent PreToolUse Hook — TOTAL GATEKEEPER
+ * PM Agent PreToolUse Hook — PER-RESPONSE GATEKEEPER
  *
  * Runs before EVERY Claude Code tool call.
  *
  * ENFORCEMENT MODEL:
  * ┌─────────────────────────────────────────────────────────┐
- * │ ALL tool calls are BLOCKED until pm_get_context is      │
- * │ called in this session.                                 │
- * │                                                         │
- * │ The only exceptions:                                    │
- * │   • Bash commands running `pm` CLI (count as check)    │
+ * │ The ONLY tools that pass through are:                   │
+ * │   • PM Agent MCP tools (pm_get_context, pm_*)          │
  * │   • AskUserQuestion (needed for user interaction)       │
  * │                                                         │
- * │ The AI learns: "I CANNOT do anything until I call       │
- * │ pm_get_context first."                                  │
+ * │ EVERY other tool call is BLOCKED unconditionally.       │
+ * │                                                         │
+ * │ The AI MUST call pm_get_context before it can do        │
+ * │ anything else — in EVERY response.                      │
  * └─────────────────────────────────────────────────────────┘
  *
  * Claude Code hook contract:
@@ -24,85 +23,22 @@
  * Never crashes Claude Code — all errors are caught and return {}.
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
-import crypto from 'node:crypto';
-
-// ---------------------------------------------------------------------------
-// Session state tracking
-// ---------------------------------------------------------------------------
-
-const SESSION_FILE = '.claude/pm-agent-session.json';
-
-function getSessionPath() {
-  return path.join(process.cwd(), SESSION_FILE);
-}
-
-function readSession() {
-  try {
-    const p = getSessionPath();
-    if (fs.existsSync(p)) {
-      return JSON.parse(fs.readFileSync(p, 'utf-8'));
-    }
-  } catch {
-    // Corrupt or missing — start fresh
-  }
-  return {
-    session_id: crypto.randomUUID(),
-    context_loaded: false,
-    loaded_at: null,
-    pm_commands_seen: 0,
-  };
-}
-
-function writeSession(state) {
-  try {
-    const p = getSessionPath();
-    fs.mkdirSync(path.dirname(p), { recursive: true });
-    fs.writeFileSync(p, JSON.stringify(state, null, 2), 'utf-8');
-  } catch {
-    // Best-effort — never crash the hook
-  }
-}
-
-function markContextLoaded() {
-  const state = readSession();
-  state.context_loaded = true;
-  state.loaded_at = new Date().toISOString();
-  state.pm_commands_seen = (state.pm_commands_seen || 0) + 1;
-  writeSession(state);
-}
-
-/**
- * Check if a Bash command is a PM Agent CLI invocation.
- */
-function isPmCliCommand(command) {
-  return /\bpm\b/.test(command);
-}
-
-/**
- * Returns true if the session has already loaded PM Agent context.
- */
-function isSessionReady() {
-  return readSession().context_loaded;
-}
-
 // ---------------------------------------------------------------------------
 // Tools that bypass the gatekeeper (must be minimal)
 // ---------------------------------------------------------------------------
 
 /**
- * Tools that pass through unconditionally.
- * AskUserQuestion is needed so the AI can ask the user clarifying questions
- * before it has context — that's fine, it's non-destructive.
+ * Only AskUserQuestion passes through unconditionally — the AI needs it
+ * to ask questions before it has any context.
  */
 const BYPASS_TOOLS = new Set([
   'AskUserQuestion',
 ]);
 
 /**
- * MCP tool names that indicate PM Agent is being consulted.
- * When the AI calls one of these, we mark context as loaded.
+ * PM Agent MCP tools — these are the ONLY tools the AI can use freely.
+ * Every call to one of these updates the timestamp so we know PM Agent
+ * was contacted recently.
  */
 const PM_AGENT_TOOLS = [
   'pm_get_context',
@@ -136,8 +72,9 @@ const GATEKEEPER_MESSAGE = `[PM Agent — GATEKEEPER] Action blocked.
 
 ╔══════════════════════════════════════════════════════════════╗
 ║ You attempted to use a tool WITHOUT checking PM Agent       ║
-║ context first. ALL tool calls are gated until the project   ║
-║ context is loaded.                                          ║
+║ context first.                                              ║
+║                                                              ║
+║ ALL NON-PM-AGENT TOOL CALLS ARE BLOCKED.                    ║
 ║                                                              ║
 ║ CALL THIS FIRST:   pm_get_context                            ║
 ║                                                              ║
@@ -148,12 +85,12 @@ const GATEKEEPER_MESSAGE = `[PM Agent — GATEKEEPER] Action blocked.
 ║   • Project rules                                            ║
 ║   • Codebase structure                                       ║
 ║                                                              ║
-║ Without it, you are working without project context.         ║
-║ The gatekeeper will block EVERY tool until you call it.     ║
+║ Without it, you cannot use ANY tool.                         ║
+║ Call pm_get_context to proceed.                              ║
 ╚══════════════════════════════════════════════════════════════╝
 
-Required first step:  pm_get_context
-Or use CLI:           ! pm context
+Required:  pm_get_context
+Or CLI:    ! pm context
 
 This cannot be bypassed. Call pm_get_context to proceed.`;
 
@@ -168,65 +105,27 @@ export async function preToolUse({ tool, input } = {}) {
       return {};
     }
 
-    // Step 2: Detect PM Agent calls — count as context check
-    if (tool === 'Bash' && input?.command) {
-      const command = String(input.command);
-      if (isPmCliCommand(command)) {
-        markContextLoaded();
-        return {};
-      }
-    }
-
-    // Step 3: Detect MCP tool calls that are PM Agent tools
-    // In Claude Code, MCP tools are called through the Bash tool with
-    // a specific command pattern. But they can also be called natively.
-    // We check the tool name directly for pm_ prefix.
+    // Step 2: PM Agent MCP tools pass through
     if (tool.startsWith('pm_') || tool.startsWith('pm-')) {
-      // This is a PM Agent tool call — allow it and mark context loaded
-      markContextLoaded();
       return {};
     }
 
-    // Step 4: Check MCP server tool calls via their input pattern
+    // Step 3: Check MCP server tool calls via their input pattern
+    // (Some MCP tools come through with different naming)
     if (input && typeof input === 'object') {
       const inputStr = JSON.stringify(input).toLowerCase();
       for (const pmTool of PM_AGENT_TOOLS) {
         if (inputStr.includes(pmTool.toLowerCase())) {
-          markContextLoaded();
           return {};
         }
       }
     }
 
-    // Step 5: GATEKEEPER — is session ready?
-    if (!isSessionReady()) {
-      return {
-        autoApproval: false,
-        reason: GATEKEEPER_MESSAGE,
-      };
-    }
-
-    // Step 6: Session is ready — evaluate PM Agent rules
-    try {
-      const utils = await import('./hook-utils.mjs');
-
-      // Only enforce rules on write/destructive tools
-      const WRITE_TOOLS = new Set([
-        'Bash', 'Write', 'Edit', 'Rename', 'Move', 'Delete',
-        'NotebookEdit', 'TaskStop', 'ExitWorktree',
-      ]);
-
-      if (WRITE_TOOLS.has(tool)) {
-        const result = utils.evaluateRules(tool, input || {});
-        return utils.wrapResult(result.blocked, result.actions || []);
-      }
-
-      // Read tools pass through after context is loaded
-      return {};
-    } catch {
-      // Fallback if hook-utils unavailable — allow through
-      return {};
-    }
+    // Step 4: BLOCK EVERYTHING ELSE
+    return {
+      autoApproval: false,
+      reason: GATEKEEPER_MESSAGE,
+    };
   } catch (e) {
     // Never crash Claude Code from a hook
     console.error('[PM Agent] GATEKEEPER hook error:', e.message);

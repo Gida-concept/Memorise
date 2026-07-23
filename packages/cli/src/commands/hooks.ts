@@ -133,7 +133,7 @@ export function installHooks(projectPath: string): Record<string, unknown> {
       hooks: [
         {
           type: 'command',
-          command: 'node .claude/hooks/pre-tool-use.mjs',
+          command: 'node ${CLAUDE_PROJECT_DIR}/.claude/hooks/pre-tool-use.mjs',
           args: [],
         },
       ],
@@ -145,7 +145,7 @@ export function installHooks(projectPath: string): Record<string, unknown> {
       hooks: [
         {
           type: 'command',
-          command: 'node .claude/hooks/session-start.mjs',
+          command: 'node ${CLAUDE_PROJECT_DIR}/.claude/hooks/session-start.mjs',
           args: [],
         },
       ],
@@ -218,8 +218,10 @@ function getHookCommands(groups: HookMatcherGroup[] | undefined): string[] {
  * Check hook scripts exist on disk given the command string.
  */
 function hookScriptExists(command: string): boolean {
-  // command is like "node .claude/hooks/pre-tool-use.mjs"
-  const parts = command.split(' ');
+  // command is like "node ${CLAUDE_PROJECT_DIR}/.claude/hooks/pre-tool-use.mjs"
+  // Replace ${CLAUDE_PROJECT_DIR} with cwd for disk check
+  const normalized = command.replace(/\$\{CLAUDE_PROJECT_DIR\}/g, process.cwd());
+  const parts = normalized.split(' ');
   for (const part of parts) {
     if (part.endsWith('.mjs') || part.endsWith('.js') || part.endsWith('.sh')) {
       return fs.existsSync(path.resolve(process.cwd(), part));
