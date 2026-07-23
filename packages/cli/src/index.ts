@@ -9,12 +9,14 @@ import { scopeCommand } from './commands/scope.js';
 import { standupCommand } from './commands/standup.js';
 import { statusCommand } from './commands/status.js';
 import { rulesCommand } from './commands/rules.js';
+import { enforceCommand } from './commands/enforce.js';
 import { scanCommand } from './commands/scan.js';
 import { dependsCommand } from './commands/depends.js';
 import { impactCommand } from './commands/impact.js';
 import { searchCommand } from './commands/search.js';
 import { archCommand } from './commands/arch.js';
 import { filesCommand } from './commands/files.js';
+import { understandCommand } from './commands/understand.js';
 import { Colors } from './formatters.js';
 import { ExitCode } from './exit-codes.js';
 import { PmCliError } from './errors.js';
@@ -24,7 +26,7 @@ const program = new Command();
 program
   .name('pm')
   .description('PM Agent -- AI-native product management for developers')
-  .version('0.1.3')
+  .version('0.2.0')
   .option('--config <path>', 'Path to config file')
   .option('-p, --project <name>', 'Project name')
   .option('--verbose', 'Detailed output with debug info', false)
@@ -145,6 +147,29 @@ rules
   .description('Reload rules from file')
   .action((_, cmdObj) => rulesCommand('reload', { ...cmdObj.parent.opts() }, cmdObj.parent.opts()));
 
+// Enforce subcommand group (replaces hooks — unified enforcement config)
+const enforce = program
+  .command('enforce')
+  .description('Manage PM Agent enforcement (hooks + proxy)');
+
+enforce
+  .command('setup')
+  .description('Configure PM Agent hooks and MCP proxy')
+  .option('--project-path <path>', 'Project root path (defaults to cwd)')
+  .option('-a, --all', 'Also configure other detected clients (Cursor, Continue, VS Code)')
+  .action((opts) => enforceCommand('setup', opts));
+
+enforce
+  .command('status')
+  .description('Show enforcement status across all layers')
+  .action((opts) => enforceCommand('status', opts));
+
+enforce
+  .command('remove')
+  .description('Remove PM Agent enforcement configuration')
+  .option('--project-path <path>', 'Project root path (defaults to cwd)')
+  .action((opts) => enforceCommand('remove', opts));
+
 // Phase 6 stubs
 program
   .command('scan')
@@ -190,6 +215,11 @@ program
   .option('--type <type>', 'File type filter (source, test, doc, config, asset)')
   .option('-u, --unindexed', 'Show files not in registry')
   .action((opts) => filesCommand(opts));
+
+program
+  .command('understand')
+  .description('Deep semantic analysis of the codebase — exports, imports, types, module organization, frameworks, and entry points')
+  .action((opts) => understandCommand(opts));
 
 // ---- Parse -----------------------------------------------------------
 

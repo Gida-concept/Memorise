@@ -23,10 +23,13 @@ import { handleAnalyzeImpact } from './tools/analyze-impact.js';
 import { handleSearchCodebase } from './tools/search-codebase.js';
 import { handleGetArchitecture } from './tools/get-architecture.js';
 import { handleGetFileContext } from './tools/get-file-context.js';
+import { handleHooksSetup } from './tools/hooks-setup.js';
+import { handleEnforceSetup } from './tools/enforce-setup.js';
+import { handleUnderstandCodebase } from './tools/understand-codebase.js';
 import { autoEnforce } from './tools/auto-enforce.js';
 
 // Tools that are exempt from auto-enforcement (meta-tools)
-const AUTO_ENFORCE_SKIP = new Set(['pm_enforce_rules', 'pm_add_rule']);
+const AUTO_ENFORCE_SKIP = new Set(['pm_enforce_rules', 'pm_add_rule', 'pm_hooks_setup', 'pm_enforce_setup', 'pm_understand_codebase']);
 
 // Shared result content helper
 function textContent(text: string): { type: 'text'; text: string } {
@@ -274,6 +277,36 @@ const TOOL_DEFINITIONS: ToolDefinition[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: 'pm_understand_codebase',
+    description: 'Run deep semantic analysis on the codebase: extracts exports, imports, types, purposes, and produces a project-level semantic map with framework detection, module organization, and entry points',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
+    name: 'pm_hooks_setup',
+    description: '[DEPRECATED: Use pm_enforce_setup instead] Configure PM Agent Claude Code hooks for a project. Writes .claude/settings.local.json with PreToolUse and SessionStart hooks.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_path: { type: 'string', description: 'Absolute path to the project root' },
+      },
+      required: ['project_path'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'pm_enforce_setup',
+    description: 'Configure PM Agent enforcement for a project. Installs Claude Code hooks and optionally writes MCP proxy config for other clients (Cursor, Continue, VS Code, Claude Code). Uses .claude/settings.local.json for hooks and client-specific config files for the MCP proxy.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_path: { type: 'string', description: 'Absolute path to the project root' },
+        all_clients: { type: 'boolean', description: 'Auto-configure all detected clients with the MCP enforcement proxy' },
+      },
+      required: ['project_path'],
+      additionalProperties: false,
+    },
+  },
 ];
 
 // ── Handler map ──────────────────────────────────────────────────
@@ -297,6 +330,9 @@ const HANDLERS: Record<string, (args: Record<string, unknown>) => Promise<Record
   pm_search_codebase: handleSearchCodebase,
   pm_get_architecture: handleGetArchitecture,
   pm_get_file_context: handleGetFileContext,
+  pm_hooks_setup: handleHooksSetup,
+  pm_enforce_setup: handleEnforceSetup,
+  pm_understand_codebase: handleUnderstandCodebase,
 };
 
 // ── Server setup ─────────────────────────────────────────────────
@@ -305,30 +341,31 @@ const HANDLERS: Record<string, (args: Record<string, unknown>) => Promise<Record
 const server = new Server(
   ({
     name: 'pm-agent-mcp',
-    version: '0.1.3',
+    version: '0.2.0',
     instructions: `You are connected to **PM Agent** — a project management context server for AI coding assistants.
 
-**What PM Agent provides:**
+**PM Agent — Required Behavior (ENFORCED):**
+
+Hook monitoring is ACTIVE — every destructive operation is checked against PM Agent rules. Violating a hard rule will block your tool calls.
+
+You MUST follow this sequence on EVERY interaction:
+1. **START** — Call \`pm_get_context\` to learn current project state
+2. **CHECK** — Call \`pm_get_blockers\` and \`pm_enforce_rules\` before any work
+3. **LOG** — After significant decisions, call \`pm_log_decision\`
+4. **NOTE** — Call \`pm_get_notes\` when starting something new
+
+Failure to follow this sequence will result in blocked operations and user rejection.
+
+**Auto-enforcement is active** — rules are checked automatically on every tool call. If a \`hard\` rule's trigger matches the tool and arguments, the call is blocked before execution. Write rules with expression-compatible triggers (e.g. \`tool_name == 'pm_log_decision'\`) to take full advantage of auto-enforcement.
+
+**PM Agent provides:**
 - **Decisions** — architecture decision records with rationale and links
 - **Blockers** — active and resolved blockers with severity
 - **Notes** — tagged observations and project insights
 - **Scope** — sprint capacity and risk assessment
 - **Rules** — hard/soft enforcement rules that guard project behavior
 - **Codebase scanning** — file registry, dependencies, architecture overview
-- **Dependency graphs** — file-level dependency and impact analysis
-
-**Required behavior — follow these rules on every interaction:**
-
-1. **Before proposing changes**, call \`pm_get_context\` to check current project state (blockers, decisions, rules)
-2. **Before modifying scope**, call \`pm_check_scope\` to verify sprint capacity and risk
-3. **Check rules** — call \`pm_enforce_rules\` or \`pm_get_decisions\` before finalizing any change that could affect project direction
-4. **Log decisions** — after reaching significant agreement, call \`pm_log_decision\` to persist the rationale
-5. **Review notes** — call \`pm_get_notes\` to check recent observations before starting new work
-6. **Check blockers** — call \`pm_get_blockers\` before planning work that might conflict with blocked items
-
-PM Agent's tools are always available. Use them proactively — do not wait to be asked.
-
-**Auto-enforcement is active** — rules are checked automatically on every tool call. If a \`hard\` rule's trigger matches the tool and arguments, the call is blocked before execution. Write rules with expression-compatible triggers (e.g. \`tool_name == 'pm_log_decision'\`) to take full advantage of auto-enforcement.`,
+- **Dependency graphs** — file-level dependency and impact analysis`,
   }) as any,
   { capabilities: { tools: {} } },
 );

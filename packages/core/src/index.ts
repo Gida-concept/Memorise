@@ -26,12 +26,12 @@ export type { RelatedEntities } from './graph.js';
 
 // Rules engine exports
 export type { Rule, RuleResult, EnforcementResult, ParsedAction, Scope, Severity, ActionType } from './rules/types.js';
-export { loadRules, enforce, evaluateRule, parseAction, addRule, removeRule, toggleRule } from './rules/engine.js';
+export { loadRules, enforce, evaluateRules, evaluateRule, parseAction, addRule, removeRule, toggleRule } from './rules/engine.js';
 export { tokenize, parse, evaluate, interpolate } from './rules/expression.js';
 export type { Token, TokenType, ASTNode } from './rules/expression.js';
 
 // Scanner exports
-export { scan, scanIncremental, verify } from './scanner/index.js';
+export { scan, scanIncremental, verify, semanticScan } from './scanner/index.js';
 export type { ScanResult, ScanOptions } from './scanner/index.js';
 export { walkProject, classifyFile, hashFile, parseGitignore } from './scanner/file-registry.js';
 export type { FileEntry, FileType } from './scanner/file-registry.js';
@@ -42,6 +42,10 @@ export type { ArchitectureEntry, ArchitectureRole } from './scanner/architecture
 export { startWatcher, stopWatcher } from './scanner/change-watcher.js';
 export { analyzeImpact } from './scanner/impact-analyzer.js';
 export type { ImpactReport } from './scanner/impact-analyzer.js';
+export { analyzeFile } from './scanner/semantic-analyzer.js';
+export type { FileSummary } from './scanner/semantic-analyzer.js';
+export { buildProjectMap } from './scanner/project-map.js';
+export type { ProjectSemanticMap } from './scanner/project-map.js';
 
 // Integration exports
 export { GitHubIntegration } from './integrations/github.js';
@@ -54,6 +58,10 @@ export { IntegrationError, withRetry } from './integrations/types.js';
 // Database retry utilities
 export { withWriteRetry, withWriteRetryAsync } from './database/retry.js';
 export type { RetryOptions } from './database/retry.js';
+
+// Scaffold exports
+export { generateScaffold } from './scaffold/index.js';
+export type { ScaffoldOptions, ScaffoldResult } from './scaffold/index.js';
 
 // Shipped defaults
 export { DEFAULT_CONFIG_TOML, DEFAULT_RULES_TOML } from './defaults.js';

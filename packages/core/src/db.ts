@@ -82,6 +82,23 @@ const migrations: Migration[] = [
     },
   },
   {
+    name: '003_semantic_index',
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS file_summaries (
+          path TEXT PRIMARY KEY,
+          summary TEXT,
+          purpose TEXT,
+          exports TEXT DEFAULT '[]',
+          imports TEXT DEFAULT '[]',
+          key_types TEXT DEFAULT '[]',
+          generated_at TEXT,
+          created_at TEXT DEFAULT (datetime('now'))
+        );
+      `);
+    },
+  },
+  {
     name: '002_codebase_intelligence',
     up: (db) => {
       db.exec(`

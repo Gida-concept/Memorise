@@ -1,6 +1,6 @@
 {
   "name": "pm-agent",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "publishConfig": {
     "access": "public",
@@ -10,19 +10,22 @@
   "workspaces": [
     "packages/core",
     "packages/cli",
-    "packages/mcp-server"
+    "packages/mcp-server",
+    "packages/hooks",
+    "packages/proxy"
   ],
   "scripts": {
-    "build": "npm run build --workspace=packages/core && npm run build --workspace=packages/cli && npm run build --workspace=packages/mcp-server",
+    "build": "npm run build --workspace=packages/core && npm run build --workspace=packages/cli && npm run build --workspace=packages/mcp-server && npm run build --workspace=packages/proxy",
     "build:core": "npm run build --workspace=packages/core",
     "build:cli": "npm run build --workspace=packages/cli",
     "build:mcp": "npm run build --workspace=packages/mcp-server",
+    "build:proxy": "npm run build --workspace=packages/proxy",
     "dev": "npm run dev --workspace=packages/core & npm run dev --workspace=packages/cli & npm run dev --workspace=packages/mcp-server",
     "lint": "eslint \"packages/*/src/**/*.ts\"",
     "lint:fix": "eslint --fix \"packages/*/src/**/*.ts\"",
     "format": "prettier --write '**/*.{ts,json,md}'",
     "format:check": "prettier --check '**/*.{ts,json,md}'",
-    "typecheck": "tsc --noEmit -p packages/core/tsconfig.json && tsc --noEmit -p packages/cli/tsconfig.json && tsc --noEmit -p packages/mcp-server/tsconfig.json",
+    "typecheck": "tsc --noEmit -p packages/core/tsconfig.json && tsc --noEmit -p packages/cli/tsconfig.json && tsc --noEmit -p packages/mcp-server/tsconfig.json && tsc --noEmit -p packages/proxy/tsconfig.json",
     "clean": "rm -rf packages/*/dist packages/*/node_modules node_modules",
     "prepare": "husky"
   },

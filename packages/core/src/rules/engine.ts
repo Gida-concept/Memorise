@@ -159,6 +159,50 @@ export function evaluateRule(rule: Rule, context: Record<string, unknown>): Rule
 }
 
 /**
+ * Evaluate rules against a context object without loading config from disk.
+ * Used by: MCP server auto-enforcement AND Claude Code PreToolUse hook.
+ * This is a pure function that takes pre-loaded rules and a context object.
+ *
+ * Returns a lightweight result with blocked flag and warnings list.
+ * Unlike enforce(), this does NOT handle confirmation callbacks — it's
+ * designed for mechanical enforcement where only hard-block matters.
+ */
+export function evaluateRules(rules: Rule[], context: Record<string, unknown>): EnforcementResult {
+  const results: RuleResult[] = [];
+  let blocked = false;
+
+  // Sort by severity: hard first, then soft, then info
+  const severityOrder: Record<Severity, number> = { hard: 0, soft: 1, info: 2 };
+  const sorted = [...rules].sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
+
+  for (const rule of sorted) {
+    if (rule.enabled === false) continue;
+    const result = evaluateRule(rule, context);
+    results.push(result);
+
+    if (!result.triggered) continue;
+
+    if (result.action === 'block' && !result.passed) {
+      blocked = true;
+      break;
+    }
+  }
+
+  const triggeredCount = results.filter((r) => r.triggered).length;
+  const blockedCount = results.filter((r) => r.action === 'block' && !r.passed).length;
+
+  return {
+    status: blocked ? 'rejected' : 'completed',
+    results,
+    rules_evaluated: results.length,
+    rules_triggered: triggeredCount,
+    rules_blocked: blockedCount,
+    blocked,
+    confirmation_required: false,
+  };
+}
+
+/**
  * Enforce all matching rules against the given context.
  * Evaluates hard rules first, then soft, then info.
  */

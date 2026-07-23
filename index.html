@@ -3,1337 +3,1100 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PM Agent — Project Management Context for AI Coding Assistants</title>
+  <title>PM Agent — Project Context for AI Coding Assistants</title>
   <meta name="description" content="PM Agent is an MCP server that gives your AI coding assistant structured project context — decisions, blockers, scope, and rules — so it works with full awareness, not just code." />
 
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&%2310003;</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
   <style>
-    /* ═══════════════════════════════════════════
+    /* ═══════════════════════════════════════════════════════
        DESIGN TOKENS
-       ═══════════════════════════════════════════ */
+       ═══════════════════════════════════════════════════════ */
     :root {
-      --bg-base: #0a0a0c;
-      --bg-surface: #111113;
-      --bg-elevated: #18181b;
-      --bg-hover: #1f1f23;
-      --border-subtle: rgba(255,255,255,0.06);
-      --border-default: rgba(255,255,255,0.1);
-      --border-strong: rgba(255,255,255,0.15);
+      --black:    #08080a;
+      --surface:  #0d0d12;
+      --elevated: #14141c;
+      --hover:    #1c1c26;
 
-      --text-primary: #f4f4f5;
-      --text-secondary: #a1a1aa;
-      --text-tertiary: #71717a;
-      --text-muted: #52525b;
+      --border-dim:   rgba(255,255,255,0.04);
+      --border-light: rgba(255,255,255,0.08);
+      --border-mid:   rgba(255,255,255,0.12);
+      --border-strong:rgba(255,255,255,0.18);
 
-      --accent: #ea580c;
-      --accent-hover: #f97316;
-      --accent-muted: rgba(234,88,12,0.12);
-      --accent-glow: rgba(234,88,12,0.25);
+      --text:         #f0f0f4;
+      --text-mid:     #9494a0;
+      --text-dim:     #636374;
+      --text-faint:   #454558;
 
-      --blue: #3b82f6;
-      --blue-muted: rgba(59,130,246,0.1);
+      --orange:       #ea580c;
+      --orange-bright:#f97316;
+      --orange-light: #fdba74;
 
-      --accent-green: #22c55e;
-      --accent-amber: #f59e0b;
-      --accent-blue: #3b82f6;
+      --blue:         #3b82f6;
+      --blue-bright:  #60a5fa;
+      --blue-light:   #bfdbfe;
+
+      --grad-brand:   linear-gradient(135deg, var(--orange-bright) 0%, var(--blue) 100%);
+      --grad-subtle:  linear-gradient(180deg, rgba(59,130,246,0.06) 0%, transparent 100%);
+      --glow-orange:  rgba(234,88,12,0.2);
+      --glow-blue:    rgba(59,130,246,0.15);
 
       --radius-sm: 6px;
       --radius-md: 10px;
-      --radius-lg: 14px;
-      --radius-xl: 20px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
 
-      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', monospace;
 
-      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-      --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+      --ease-smooth: cubic-bezier(0.65, 0, 0.35, 1);
+
+      --container: min(1200px, 100% - 48px);
     }
 
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
-      font-family: var(--font-sans);
-      background: var(--bg-base);
-      color: var(--text-primary);
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-      overflow-x: hidden;
+    /* ────────────────────────────────────────────────────────────
+       RESET
+       ──────────────────────────────────────────────────────────── */
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+    body{
+      font-family:var(--font);
+      background:var(--black);
+      color:var(--text);
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      line-height:1.6;
+      overflow-x:hidden;
     }
+    img{max-width:100%;display:block}
+    a{color:inherit;text-decoration:none}
+    button{border:none;background:none;cursor:pointer;font:inherit;color:inherit}
+    ::selection{background:rgba(234,88,12,0.25);color:#fff}
+    ::-webkit-scrollbar{width:6px}
+    ::-webkit-scrollbar-track{background:var(--black)}
+    ::-webkit-scrollbar-thumb{background:var(--border-mid);border-radius:3px}
 
-    ::selection { background: var(--accent-muted); color: var(--accent-hover); }
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg-base); }
-    ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
-
-    /* ═══════════════════════════════════════════
+    /* ────────────────────────────────────────────────────────────
        UTILITY
-       ═══════════════════════════════════════════ */
-    .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.6s var(--ease-out), transform 0.6s var(--ease-out); }
-    .reveal.visible { opacity: 1; transform: translateY(0); }
-    .reveal-delay-1 { transition-delay: 0.1s; }
-    .reveal-delay-2 { transition-delay: 0.15s; }
-    .reveal-delay-3 { transition-delay: 0.2s; }
-    .reveal-delay-4 { transition-delay: 0.25s; }
+       ──────────────────────────────────────────────────────────── */
+    .container{width:var(--container);margin-inline:auto}
+    .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
 
-    .tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 12px;
-      border-radius: 100px;
-      font-size: 0.78rem;
-      font-weight: 600;
-      letter-spacing: 0.02em;
-      background: var(--accent-muted);
-      color: var(--accent-hover);
-      border: 1px solid rgba(234,88,12,0.2);
-    }
-    .tag i { font-size: 0.65rem; color: var(--accent-green); }
-
-    .code-inline {
-      font-family: var(--font-mono);
-      font-size: 0.85em;
-      padding: 2px 6px;
-      background: var(--bg-elevated);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-sm);
-      color: var(--text-secondary);
+    .gradient-text{
+      background:var(--grad-brand);
+      -webkit-background-clip:text;
+      background-clip:text;
+      -webkit-text-fill-color:transparent;
     }
 
-    /* ═══════════════════════════════════════════
-       NAVBAR
-       ═══════════════════════════════════════════ */
-    .navbar {
-      padding: 0;
-      background: rgba(10,10,12,0.85);
-      backdrop-filter: blur(16px) saturate(1.4);
-      -webkit-backdrop-filter: blur(16px) saturate(1.4);
-      transition: background 0.3s ease, border-color 0.3s ease;
-      border-bottom: 1px solid var(--border-subtle);
-    }
-    .navbar.is-stuck {
-      background: rgba(10,10,12,0.85);
-      backdrop-filter: blur(16px) saturate(1.4);
-      -webkit-backdrop-filter: blur(16px) saturate(1.4);
-      border-bottom-color: var(--border-subtle);
-    }
-    .navbar .nav-link {
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: var(--text-tertiary) !important;
-      padding: 0.5rem 1rem !important;
-      transition: color 0.2s;
-      letter-spacing: -0.01em;
-    }
-    .navbar .nav-link:hover { color: var(--text-primary) !important; }
-    .navbar-brand {
-      font-weight: 700;
-      font-size: 1.15rem;
-      letter-spacing: -0.02em;
-      color: var(--text-primary);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .navbar-brand .logo-mark {
-      width: 28px;
-      height: 28px;
-      border-radius: 8px;
-      background: linear-gradient(135deg, var(--accent) 0%, #60a5fa 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.85rem;
-      color: #fff;
-    }
-    .navbar .btn-ghost {
-      background: transparent;
-      border: 1px solid var(--border-default);
-      color: var(--text-primary);
-      padding: 0.45rem 1.1rem;
-      border-radius: var(--radius-md);
-      font-size: 0.85rem;
-      font-weight: 600;
-      transition: all 0.2s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .navbar .btn-ghost:hover {
-      background: var(--bg-hover);
-      border-color: var(--border-strong);
+    .section-tag{
+      display:inline-flex;align-items:center;gap:5px;
+      padding:3px 10px 3px 8px;
+      border-radius:100px;
+      font-size:0.72rem;font-weight:600;letter-spacing:0.03em;
+      background:rgba(234,88,12,0.08);
+      color:var(--orange-bright);
+      border:1px solid rgba(234,88,12,0.12);
+      margin-bottom:1rem;
+      text-transform:uppercase;
     }
 
-    /* ═══════════════════════════════════════════
-       HERO
-       ═══════════════════════════════════════════ */
-    .hero {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      position: relative;
-      overflow: hidden;
-      padding-top: 5rem;
+    .reveal{
+      opacity:0;transform:translateY(20px);
+      transition:opacity 0.5s var(--ease), transform 0.5s var(--ease);
     }
-    .hero-grid-bg {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      background-image:
-        linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
-      background-size: 40px 40px;
-      mask-image: radial-gradient(ellipse 60% 50% at 50% 40%, black 20%, transparent 70%);
-      -webkit-mask-image: radial-gradient(ellipse 60% 50% at 50% 40%, black 20%, transparent 70%);
-    }
-    .hero-glow {
-      position: absolute;
-      top: -20%;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 700px;
-      height: 700px;
-      background: radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 60%);
-      pointer-events: none;
-    }
-    .hero-label {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 5px 14px 5px 10px;
-      border-radius: 100px;
-      border: 1px solid var(--border-default);
-      background: var(--bg-surface);
-      font-size: 0.82rem;
-      color: var(--text-secondary);
-      margin-bottom: 2rem;
-    }
-    .hero-label .dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--accent-green);
-      box-shadow: 0 0 8px rgba(34,197,94,0.5);
-    }
-    .hero h1 {
-      font-size: clamp(2.6rem, 5.5vw, 4.2rem);
-      font-weight: 750;
-      letter-spacing: -0.03em;
-      line-height: 1.08;
-      margin-bottom: 1.2rem;
-    }
-    .hero h1 .accent {
-      background: linear-gradient(135deg, var(--accent) 0%, #3b82f6 60%, #60a5fa 100%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .hero p {
-      font-size: 1.1rem;
-      line-height: 1.7;
-      color: var(--text-secondary);
-      max-width: 520px;
-      margin-bottom: 2rem;
-    }
-    .hero-actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 2.5rem;
-    }
-    .btn-primary-solid {
-      background: var(--accent);
-      border: none;
-      color: #fff;
-      padding: 0.7rem 1.6rem;
-      border-radius: var(--radius-md);
-      font-weight: 600;
-      font-size: 0.95rem;
-      transition: all 0.2s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      box-shadow: 0 1px 0 rgba(255,255,255,0.1) inset, 0 2px 8px rgba(234,88,12,0.3);
-    }
-    .btn-primary-solid:hover {
-      background: var(--accent-hover);
-      transform: translateY(-1px);
-      box-shadow: 0 1px 0 rgba(255,255,255,0.1) inset, 0 6px 20px rgba(234,88,12,0.35);
-      color: #fff;
-    }
-    .btn-secondary-solid {
-      background: var(--bg-elevated);
-      border: 1px solid var(--border-default);
-      color: var(--text-primary);
-      padding: 0.7rem 1.6rem;
-      border-radius: var(--radius-md);
-      font-weight: 600;
-      font-size: 0.95rem;
-      transition: all 0.2s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .btn-secondary-solid:hover {
-      background: var(--bg-hover);
-      border-color: var(--border-strong);
-      color: var(--text-primary);
-    }
-    .hero-stat-row {
-      display: flex;
-      gap: 2.5rem;
-      flex-wrap: wrap;
-    }
-    .hero-stat h4 {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin-bottom: 0;
-      line-height: 1;
-      color: var(--text-primary);
-    }
-    .hero-stat h4 .sub {
-      font-size: 0.9rem;
-      font-weight: 500;
-      color: var(--text-tertiary);
-    }
-    .hero-stat p {
-      font-size: 0.82rem;
-      color: var(--text-tertiary);
-      margin-bottom: 0;
-      margin-top: 4px;
+    .reveal.visible{opacity:1;transform:translateY(0)}
+    .reveal-d1{transition-delay:0.08s}
+    .reveal-d2{transition-delay:0.14s}
+    .reveal-d3{transition-delay:0.2s}
+    .reveal-d4{transition-delay:0.28s}
+
+    /* ────────────────────────────────────────────────────────────
+       BRAND ACCENT STRIP
+       ──────────────────────────────────────────────────────────── */
+    .brand-strip{
+      height:3px;
+      background:var(--grad-brand);
     }
 
-    /* Hero Terminal */
-    .hero-terminal {
-      background: #0d0d14;
-      border: 1px solid var(--border-default);
-      border-radius: var(--radius-lg);
-      overflow: hidden;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.03) inset;
+    /* ────────────────────────────────────────────────────────────
+       HEADER / NAV (mobile first)
+       ──────────────────────────────────────────────────────────── */
+    .page-header{
+      position:fixed;top:0;left:0;right:0;z-index:100;
+      background:rgba(8,8,10,0.82);
+      backdrop-filter:blur(18px) saturate(1.3);
+      -webkit-backdrop-filter:blur(18px) saturate(1.3);
+      border-bottom:1px solid var(--border-dim);
+      transition:border-color 0.3s;
     }
-    .hero-terminal .term-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 12px 16px;
-      border-bottom: 1px solid var(--border-subtle);
-      background: rgba(255,255,255,0.02);
-    }
-    .hero-terminal .term-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-    }
-    .hero-terminal .term-dot:nth-child(1) { background: #ef4444; }
-    .hero-terminal .term-dot:nth-child(2) { background: var(--accent-amber); }
-    .hero-terminal .term-dot:nth-child(3) { background: var(--accent-green); }
-    .hero-terminal .term-title {
-      font-size: 0.75rem;
-      color: var(--text-tertiary);
-      margin-left: 8px;
-      font-weight: 500;
-    }
-    .hero-terminal .term-body {
-      padding: 16px;
-      font-family: var(--font-mono);
-      font-size: 0.8rem;
-      line-height: 1.65;
-      color: var(--text-secondary);
-    }
-    .hero-terminal .term-body .prompt { color: var(--accent-green); }
-    .hero-terminal .term-body .output { color: var(--text-tertiary); }
-    .hero-terminal .term-body .highlight { color: var(--accent-hover); }
-    .hero-terminal .term-body .string { color: #fbbf24; }
-    .hero-terminal .term-body .dim { color: #52525b; }
+    .page-header.is-stuck{border-bottom-color:var(--border-light)}
 
-    /* ═══════════════════════════════════════════
-       SECTION COMMON
-       ═══════════════════════════════════════════ */
-    section { padding: 6rem 0; }
-    .section-label {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 12px;
-      border-radius: 100px;
-      font-size: 0.78rem;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      background: var(--accent-muted);
-      color: var(--accent);
-      margin-bottom: 1rem;
-      border: 1px solid rgba(234,88,12,0.15);
-    }
-    .section-heading {
-      font-size: clamp(1.8rem, 3vw, 2.5rem);
-      font-weight: 750;
-      letter-spacing: -0.025em;
-      line-height: 1.15;
-      margin-bottom: 0.75rem;
-    }
-    .section-sub {
-      font-size: 1.05rem;
-      color: var(--text-secondary);
-      max-width: 560px;
-      line-height: 1.65;
-    }
-    .section-sub.wide { max-width: 680px; }
-
-    .section-divider {
-      width: 100%;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, var(--border-default), transparent);
-      margin: 0;
-      border: none;
+    .header-inner{
+      display:flex;align-items:center;justify-content:space-between;
+      height:56px;
     }
 
-    /* ═══════════════════════════════════════════
+    .logo{
+      display:flex;align-items:center;gap:8px;
+      font-weight:700;font-size:1.05rem;letter-spacing:-0.02em;
+    }
+    .logo-mark{
+      width:26px;height:26px;border-radius:7px;
+      background:var(--grad-brand);
+      display:flex;align-items:center;justify-content:center;
+      font-size:0.7rem;color:#fff;flex-shrink:0;
+    }
+
+    /* Mobile menu toggle */
+    .menu-toggle{
+      display:flex;flex-direction:column;gap:5px;
+      width:28px;padding:4px 0;
+      position:relative;z-index:110;
+    }
+    .menu-toggle span{
+      display:block;height:2px;border-radius:1px;
+      background:var(--text);transition:all 0.3s var(--ease);
+      transform-origin:center;
+    }
+    .menu-toggle.open span:nth-child(1){
+      transform:translateY(7px) rotate(45deg);
+    }
+    .menu-toggle.open span:nth-child(2){
+      opacity:0;
+    }
+    .menu-toggle.open span:nth-child(3){
+      transform:translateY(-7px) rotate(-45deg);
+    }
+
+    /* Nav — hidden on mobile by default, toggled via .open */
+    .nav-menu{
+      position:fixed;inset:0;
+      background:rgba(8,8,10,0.97);
+      backdrop-filter:blur(24px);
+      -webkit-backdrop-filter:blur(24px);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      gap:1.5rem;
+      opacity:0;pointer-events:none;
+      transition:opacity 0.35s var(--ease);
+      z-index:105;
+    }
+    .nav-menu.open{
+      opacity:1;pointer-events:auto;
+    }
+    .nav-menu a{
+      font-size:1.15rem;font-weight:500;
+      color:var(--text-mid);
+      transition:color 0.2s;
+    }
+    .nav-menu a:hover{color:var(--text)}
+    .nav-menu .nav-cta{
+      margin-top:0.5rem;
+      padding:0.6rem 1.5rem;
+      border-radius:var(--radius-md);
+      background:var(--orange);
+      color:#fff !important;
+      font-weight:600;font-size:0.9rem;
+      transition:background 0.2s, transform 0.2s;
+    }
+    .nav-menu .nav-cta:hover{
+      background:var(--orange-bright);
+      transform:translateY(-1px);
+    }
+
+    /* ────────────────────────────────────────────────────────────
+       HERO (mobile first)
+       ──────────────────────────────────────────────────────────── */
+    .hero{
+      position:relative;overflow:hidden;
+      padding:5.5rem 0 3.5rem;
+    }
+    /* grain texture overlay */
+    .hero::after{
+      content:'';position:absolute;inset:0;
+      opacity:0.035;
+      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-repeat:repeat;background-size:256px 256px;
+      pointer-events:none;z-index:0;
+    }
+    .hero > *{position:relative;z-index:1}
+
+    .hero-bg-glow{
+      position:absolute;top:-30%;left:50%;transform:translateX(-50%);
+      width:600px;height:600px;
+      background:radial-gradient(circle, var(--glow-blue) 0%, transparent 55%);
+      pointer-events:none;z-index:0;
+    }
+    .hero-bg-glow-2{
+      position:absolute;bottom:-20%;right:-10%;
+      width:400px;height:400px;
+      background:radial-gradient(circle, var(--glow-orange) 0%, transparent 50%);
+      pointer-events:none;z-index:0;
+    }
+
+    .hero-content{position:relative;z-index:2}
+
+    .hero-badge{
+      display:inline-flex;align-items:center;gap:7px;
+      padding:5px 12px 5px 8px;
+      border-radius:100px;
+      border:1px solid var(--border-light);
+      background:var(--surface);
+      font-size:0.75rem;color:var(--text-dim);
+      margin-bottom:1.5rem;
+    }
+    .hero-badge .dot{
+      width:6px;height:6px;border-radius:50%;
+      background:#22c55e;
+      box-shadow:0 0 10px rgba(34,197,94,0.5);
+    }
+
+    .hero h1{
+      font-size:clamp(2rem, 8vw, 3.8rem);
+      font-weight:750;letter-spacing:-0.03em;
+      line-height:1.08;margin-bottom:1rem;
+    }
+    .hero h1 .gradient-text{font-weight:800}
+
+    .hero-sub{
+      font-size:0.95rem;line-height:1.65;
+      color:var(--text-mid);max-width:480px;
+      margin-bottom:1.75rem;
+    }
+
+    .hero-actions{
+      display:flex;gap:10px;flex-direction:column;
+      align-items:center;
+      margin-bottom:2rem;
+    }
+    .btn-primary,.btn-secondary{
+      display:inline-flex;align-items:center;justify-content:center;gap:7px;
+      padding:0.7rem 1.4rem;border-radius:var(--radius-md);
+      font-weight:600;font-size:0.9rem;
+      transition:all 0.2s var(--ease);
+      min-height:44px;
+    }
+    .btn-primary{
+      background:var(--orange);color:#fff;
+      box-shadow:0 1px 0 rgba(255,255,255,0.12) inset, 0 2px 10px var(--glow-orange);
+    }
+    .btn-primary:hover{
+      background:var(--orange-bright);
+      transform:translateY(-1px);
+      box-shadow:0 1px 0 rgba(255,255,255,0.12) inset, 0 6px 20px var(--glow-orange);
+    }
+    .btn-secondary{
+      background:var(--elevated);color:var(--text);
+      border:1px solid var(--border-light);
+    }
+    .btn-secondary:hover{
+      background:var(--hover);border-color:var(--border-mid);
+      transform:translateY(-1px);
+    }
+
+    /* Hero stats */
+    .hero-stats{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:12px;
+      padding:1.25rem 0;
+      border-top:1px solid var(--border-dim);
+    }
+    .hero-stat{text-align:center}
+    .hero-stat-num{
+      font-size:1.3rem;font-weight:700;line-height:1;margin-bottom:2px;
+    }
+    .hero-stat-num .suffix{
+      font-size:0.75rem;font-weight:500;color:var(--text-dim);margin-left:1px;
+    }
+    .hero-stat-label{
+      font-size:0.7rem;color:var(--text-dim);line-height:1.2;
+    }
+
+    /* Terminal */
+    .hero-terminal{
+      background:#0a0a12;
+      border:1px solid var(--border-light);
+      border-radius:var(--radius-lg);
+      overflow:hidden;
+      box-shadow:0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.02) inset;
+      margin-top:2rem;
+    }
+    .term-head{
+      display:flex;align-items:center;gap:6px;
+      padding:10px 14px;
+      border-bottom:1px solid var(--border-dim);
+      background:rgba(255,255,255,0.015);
+    }
+    .term-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+    .term-dot:nth-child(1){background:#ef4444}
+    .term-dot:nth-child(2){background:#f59e0b}
+    .term-dot:nth-child(3){background:#22c55e}
+    .term-label{
+      font-size:0.68rem;color:var(--text-faint);margin-left:8px;
+      font-weight:500;
+    }
+    .term-body{
+      padding:14px;
+      font-family:var(--mono);font-size:0.72rem;line-height:1.6;
+      color:var(--text-mid);
+    }
+    .term-body .prompt{color:#22c55e}
+    .term-body .hl{color:var(--orange-bright)}
+    .term-body .str{color:#fbbf24}
+    .term-body .dim{color:var(--text-faint)}
+    .term-body .out{color:var(--text-dim)}
+
+    /* ────────────────────────────────────────────────────────────
+       SECTIONS (common)
+       ──────────────────────────────────────────────────────────── */
+    section{padding:3.5rem 0;scroll-margin-top:72px}
+    section + section{padding-top:0}
+    #hero{scroll-margin-top:0}
+    .section-heading{
+      font-size:clamp(1.5rem, 4vw, 2.2rem);
+      font-weight:750;letter-spacing:-0.025em;
+      line-height:1.15;margin-bottom:0.6rem;
+    }
+    .section-sub{
+      font-size:0.9rem;color:var(--text-mid);
+      line-height:1.6;max-width:540px;
+    }
+
+    /* ────────────────────────────────────────────────────────────
        FEATURES
-       ═══════════════════════════════════════════ */
-    #features { background: var(--bg-surface); }
-    .feature-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1px;
-      background: var(--border-subtle);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-lg);
-      overflow: hidden;
+       ──────────────────────────────────────────────────────────── */
+    .features-grid{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:1px;
+      background:var(--border-dim);
+      border:1px solid var(--border-dim);
+      border-radius:var(--radius-lg);
+      overflow:hidden;
+      margin-top:2rem;
     }
-    .feature-card {
-      background: var(--bg-surface);
-      padding: 2.2rem 2rem;
-      transition: background 0.25s ease;
-      position: relative;
+    .f-card{
+      background:var(--surface);
+      padding:1.5rem 1.25rem;
+      transition:background 0.25s;
+      position:relative;
     }
-    .feature-card:hover { background: var(--bg-elevated); }
-    .feature-card .icon {
-      width: 40px;
-      height: 40px;
-      border-radius: var(--radius-md);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.1rem;
-      margin-bottom: 1.2rem;
-      background: var(--accent-muted);
-      color: var(--accent);
+    /* accent left border — every 2nd card on mobile */
+    .f-card:nth-child(even){
+      border-left:2px solid transparent;
     }
-    .feature-card h4 {
-      font-size: 1rem;
-      font-weight: 650;
-      margin-bottom: 0.5rem;
-      letter-spacing: -0.01em;
+    .f-card:nth-child(even)::before{
+      content:'';position:absolute;left:0;top:0;bottom:0;width:2px;
+      background:var(--grad-brand);opacity:0;transition:opacity 0.3s;
     }
-    .feature-card p {
-      font-size: 0.875rem;
-      color: var(--text-tertiary);
-      line-height: 1.6;
-      margin-bottom: 0;
+    .f-card:nth-child(even):hover::before{opacity:1}
+
+    .f-card:hover{background:var(--elevated)}
+    .f-icon{
+      width:36px;height:36px;border-radius:var(--radius-sm);
+      display:flex;align-items:center;justify-content:center;
+      font-size:1rem;margin-bottom:1rem;
+      background:rgba(234,88,12,0.08);color:var(--orange-bright);
+    }
+    .f-card h4{
+      font-size:0.95rem;font-weight:650;
+      margin-bottom:0.4rem;letter-spacing:-0.01em;
+    }
+    .f-card p{
+      font-size:0.82rem;color:var(--text-dim);
+      line-height:1.55;margin:0;
     }
 
-    /* ═══════════════════════════════════════════
-       CODE SNIPPET
-       ═══════════════════════════════════════════ */
-    #how-it-works { background: var(--bg-base); }
-    .code-card {
-      background: #0d0d14;
-      border: 1px solid var(--border-default);
-      border-radius: var(--radius-lg);
-      overflow: hidden;
-      box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+    /* ────────────────────────────────────────────────────────────
+       SETUP / HOW IT WORKS
+       ──────────────────────────────────────────────────────────── */
+    .code-block{
+      background:#0a0a12;
+      border:1px solid var(--border-light);border-radius:var(--radius-lg);
+      overflow:hidden;
+      box-shadow:0 12px 40px rgba(0,0,0,0.3);
     }
-    .code-card .code-body {
-      padding: 1.5rem;
-      font-family: var(--font-mono);
-      font-size: 0.82rem;
-      line-height: 1.6;
-      color: var(--text-secondary);
-      overflow-x: auto;
+    .code-top{
+      display:flex;align-items:center;gap:6px;
+      padding:10px 14px;
+      border-bottom:1px solid var(--border-dim);
+      background:rgba(255,255,255,0.015);
     }
-    .code-card .code-body .comment { color: #52525b; font-style: italic; }
-    .code-card .code-body .key { color: #60a5fa; }
-    .code-card .code-body .string { color: #fbbf24; }
-    .code-card .code-body .punctuation { color: #a1a1aa; }
-    .code-card .code-body .function { color: #34d399; }
+    .code-body{
+      padding:1.2rem;
+      font-family:var(--mono);font-size:0.78rem;line-height:1.65;
+      color:var(--text-mid);overflow-x:auto;
+    }
+    .code-body .cm{color:var(--text-faint);font-style:italic}
+    .code-body .kw{color:var(--blue-bright)}
+    .code-body .st{color:#fbbf24}
+    .code-body .fn{color:#34d399}
 
-    .step-flow {
-      display: flex;
-      align-items: flex-start;
-      gap: 0;
-      margin-top: 3rem;
+    .steps{
+      display:flex;flex-direction:column;gap:0;
+      margin-top:2rem;
     }
-    .step-item {
-      flex: 1;
-      text-align: center;
-      position: relative;
-      padding: 0 1rem;
+    .step{
+      display:flex;align-items:flex-start;gap:14px;
+      padding:1rem 0;
+      position:relative;
     }
-    .step-item:not(:last-child)::after {
-      content: '';
-      position: absolute;
-      top: 20px;
-      left: calc(50% + 28px);
-      right: calc(-50% + 28px);
-      height: 1px;
-      background: linear-gradient(90deg, var(--border-default), transparent);
+    .step:not(:last-child)::after{
+      content:'';position:absolute;left:15px;top:44px;bottom:0;
+      width:1px;
+      background:linear-gradient(var(--border-light),transparent);
     }
-    .step-num {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.85rem;
-      font-weight: 700;
-      margin: 0 auto 0.8rem;
-      background: var(--accent-muted);
-      color: var(--accent);
-      border: 1px solid rgba(234,88,12,0.2);
+    .step-num{
+      width:32px;height:32px;border-radius:50%;flex-shrink:0;
+      display:flex;align-items:center;justify-content:center;
+      font-size:0.78rem;font-weight:700;
+      background:rgba(234,88,12,0.1);color:var(--orange-bright);
+      border:1px solid rgba(234,88,12,0.15);
     }
-    .step-item h5 {
-      font-size: 0.95rem;
-      font-weight: 650;
-      margin-bottom: 0.35rem;
+    .step-body h5{
+      font-size:0.9rem;font-weight:650;margin-bottom:0.15rem;
     }
-    .step-item p {
-      font-size: 0.82rem;
-      color: var(--text-tertiary);
-      margin-bottom: 0;
-      line-height: 1.5;
+    .step-body p{
+      font-size:0.8rem;color:var(--text-dim);line-height:1.5;margin:0;
     }
 
-    /* ═══════════════════════════════════════════
+    /* ────────────────────────────────────────────────────────────
        TOOLS
-       ═══════════════════════════════════════════ */
-    #tools { background: var(--bg-surface); }
-    .tools-list {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 1px;
-      background: var(--border-subtle);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-lg);
-      overflow: hidden;
+       ──────────────────────────────────────────────────────────── */
+    .tools-grid{
+      display:grid;grid-template-columns:1fr;
+      gap:1px;background:var(--border-dim);
+      border:1px solid var(--border-dim);border-radius:var(--radius-lg);
+      overflow:hidden;
+      margin-top:2rem;
     }
-    .tool-item {
-      background: var(--bg-surface);
-      padding: 1.2rem 1.5rem;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      transition: background 0.2s;
+    .t-item{
+      background:var(--surface);
+      padding:0.9rem 1.1rem;
+      display:flex;align-items:center;gap:12px;
+      transition:background 0.2s;
+      min-height:52px;
     }
-    .tool-item:hover { background: var(--bg-elevated); }
-    .tool-item .ti {
-      width: 34px;
-      height: 34px;
-      border-radius: var(--radius-sm);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.95rem;
-      flex-shrink: 0;
-      background: rgba(234,88,12,0.08);
-      color: var(--accent);
+    .t-item:hover{background:var(--elevated)}
+    .t-i{
+      width:28px;height:28px;border-radius:var(--radius-sm);flex-shrink:0;
+      display:flex;align-items:center;justify-content:center;
+      font-size:0.78rem;
+      background:rgba(234,88,12,0.06);color:var(--orange);
     }
-    .tool-item .ti-desc strong {
-      display: block;
-      font-size: 0.875rem;
-      font-weight: 600;
-      margin-bottom: 1px;
+    .t-desc strong{
+      display:block;font-size:0.82rem;font-weight:600;margin-bottom:1px;
     }
-    .tool-item .ti-desc span {
-      font-size: 0.8rem;
-      color: var(--text-tertiary);
+    .t-desc span{
+      font-size:0.72rem;color:var(--text-dim);
     }
 
-    /* ═══════════════════════════════════════════
+    /* ────────────────────────────────────────────────────────────
        INTEGRATIONS
-       ═══════════════════════════════════════════ */
-    #integrations { background: var(--bg-base); }
-    .integration-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1rem;
+       ──────────────────────────────────────────────────────────── */
+    .integ-grid{
+      display:grid;grid-template-columns:repeat(2,1fr);
+      gap:10px;
+      margin-top:2rem;
     }
-    .integ-card {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding: 1.1rem 1.2rem;
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-md);
-      transition: all 0.2s ease;
+    .i-card{
+      display:flex;align-items:center;gap:12px;
+      padding:0.9rem 1rem;
+      background:var(--surface);
+      border:1px solid var(--border-dim);
+      border-radius:var(--radius-md);
+      transition:all 0.2s;
     }
-    .integ-card:hover {
-      border-color: var(--border-default);
-      background: var(--bg-elevated);
+    .i-card:hover{
+      border-color:var(--border-light);
+      background:var(--elevated);
     }
-    .integ-card .ii {
-      width: 38px;
-      height: 38px;
-      border-radius: var(--radius-sm);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.15rem;
-      flex-shrink: 0;
-      background: rgba(255,255,255,0.04);
-      color: var(--text-secondary);
+    .i-icon{
+      width:32px;height:32px;border-radius:var(--radius-sm);flex-shrink:0;
+      display:flex;align-items:center;justify-content:center;
+      font-size:0.9rem;
+      background:rgba(255,255,255,0.03);color:var(--text-dim);
     }
-    .integ-card .ii-label strong {
-      display: block;
-      font-size: 0.875rem;
-      font-weight: 600;
+    .i-label strong{
+      display:block;font-size:0.82rem;font-weight:600;
     }
-    .integ-card .ii-label span {
-      font-size: 0.75rem;
-      color: var(--text-muted);
+    .i-label span{
+      font-size:0.68rem;color:var(--text-faint);
     }
 
-    /* ═══════════════════════════════════════════
+    /* ────────────────────────────────────────────────────────────
        CTA
-       ═══════════════════════════════════════════ */
-    #cta {
-      background: var(--bg-surface);
-      padding: 0;
+       ──────────────────────────────────────────────────────────── */
+    .cta-box{
+      position:relative;overflow:hidden;
+      background:var(--surface);
+      border:1px solid var(--border-light);
+      border-radius:var(--radius-xl);
+      padding:2.5rem 1.5rem;
+      text-align:center;
     }
-    .cta-box {
-      background: linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(234,88,12,0.05) 100%);
-      border: 1px solid rgba(59,130,246,0.15);
-      border-radius: var(--radius-xl);
-      padding: 4rem 3rem;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
+    .cta-box::before{
+      content:'';position:absolute;inset:0;
+      background:var(--grad-subtle);
+      pointer-events:none;
     }
-    .cta-box::before {
-      content: '';
-      position: absolute;
-      top: -40%;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 500px;
-      height: 500px;
-      background: radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 60%);
-      pointer-events: none;
+    .cta-box > *{position:relative;z-index:1}
+    .cta-box h2{
+      font-size:clamp(1.4rem, 3.5vw, 2rem);
+      font-weight:750;letter-spacing:-0.025em;
+      margin-bottom:0.6rem;
     }
-    .cta-box h2 {
-      font-size: clamp(1.6rem, 3vw, 2.2rem);
-      font-weight: 750;
-      letter-spacing: -0.025em;
-      margin-bottom: 0.75rem;
+    .cta-box p{
+      font-size:0.9rem;color:var(--text-mid);
+      max-width:480px;margin:0 auto 1.5rem;line-height:1.6;
     }
-    .cta-box p {
-      font-size: 1.05rem;
-      color: var(--text-secondary);
-      max-width: 500px;
-      margin: 0 auto 1.5rem;
-      line-height: 1.6;
-    }
-    .cta-actions {
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    .btn-cta-primary {
-      background: var(--accent);
-      border: none;
-      color: #fff;
-      padding: 0.75rem 2rem;
-      border-radius: var(--radius-md);
-      font-weight: 600;
-      font-size: 1rem;
-      transition: all 0.2s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      box-shadow: 0 2px 10px rgba(234,88,12,0.3);
-    }
-    .btn-cta-primary:hover {
-      background: var(--accent-hover);
-      transform: translateY(-1px);
-      box-shadow: 0 8px 25px rgba(234,88,12,0.35);
-      color: #fff;
-    }
-    .btn-cta-ghost {
-      background: transparent;
-      border: 1px solid var(--border-default);
-      color: var(--text-primary);
-      padding: 0.75rem 2rem;
-      border-radius: var(--radius-md);
-      font-weight: 600;
-      font-size: 1rem;
-      transition: all 0.2s ease;
-    }
-    .btn-cta-ghost:hover {
-      background: var(--bg-hover);
-      border-color: var(--border-strong);
-      color: var(--text-primary);
+    .cta-actions{
+      display:flex;gap:10px;flex-direction:column;
+      align-items:center;
     }
 
-    /* ═══════════════════════════════════════════
+    /* ────────────────────────────────────────────────────────────
        FOOTER
-       ═══════════════════════════════════════════ */
-    footer {
-      padding: 2.5rem 0;
-      background: var(--bg-base);
-      border-top: 1px solid var(--border-subtle);
+       ──────────────────────────────────────────────────────────── */
+    .page-footer{
+      padding:2rem 0;
+      border-top:1px solid var(--border-dim);
     }
-    footer .brand {
-      font-weight: 700;
-      color: var(--text-primary);
-      font-size: 1rem;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    .footer-inner{
+      display:flex;flex-direction:column;align-items:center;
+      gap:1rem;text-align:center;
     }
-    footer .brand .logo-mark {
-      width: 24px;
-      height: 24px;
-      border-radius: 6px;
-      background: linear-gradient(135deg, var(--accent) 0%, #60a5fa 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.7rem;
-      color: #fff;
+    .footer-logo{
+      display:flex;align-items:center;gap:7px;
+      font-weight:700;font-size:0.9rem;
     }
-    footer a {
-      color: var(--text-tertiary);
-      text-decoration: none;
-      transition: color 0.2s;
-      font-size: 0.875rem;
+    .footer-logo .logo-mark{
+      width:22px;height:22px;border-radius:5px;
+      font-size:0.6rem;
     }
-    footer a:hover { color: var(--text-primary); }
-    footer .copyright {
-      font-size: 0.82rem;
-      color: var(--text-muted);
+    .footer-links{
+      display:flex;gap:1.25rem;
+    }
+    .footer-links a{
+      font-size:0.8rem;color:var(--text-dim);
+      transition:color 0.2s;
+    }
+    .footer-links a:hover{color:var(--text-mid)}
+    .footer-copy{
+      font-size:0.75rem;color:var(--text-faint);
     }
 
-    /* ═══════════════════════════════════════════
-       RESPONSIVE
-       ═══════════════════════════════════════════ */
-    /* Tablet / small laptop */
-    @media (max-width: 991.98px) {
-      .feature-grid { grid-template-columns: repeat(2, 1fr); }
-      .integration-grid { grid-template-columns: repeat(2, 1fr); }
-      /* Better spacing for collapsed nav links */
-      .navbar .nav-link { padding: 0.65rem 1rem !important; }
-    }
-    /* Mobile */
-    @media (max-width: 767.98px) {
-      section { padding: 4rem 0; }
-      .feature-grid { grid-template-columns: 1fr; }
-      .tools-list { grid-template-columns: 1fr; }
-      .integration-grid { grid-template-columns: 1fr; }
-      .step-flow { flex-direction: column; gap: 1.75rem; align-items: center; }
-      .step-item { max-width: 300px; }
-      .step-item:not(:last-child)::after { display: none; }
-      .cta-box { padding: 2.5rem 1.5rem; }
-      .hero h1 { font-size: 2.2rem; }
-      .hero-stat-row { gap: 1.5rem; }
+    /* ════════════════════════════════════════════════════════
+       TABLET  (640px+)
+       ════════════════════════════════════════════════════════ */
+    @media (min-width: 640px){
+      .header-inner{height:60px}
 
-      /* Hero touchups */
-      .hero p { font-size: 1rem; }
-      .hero-grid-bg {
-        mask-image: radial-gradient(ellipse 80% 50% at 50% 40%, black 20%, transparent 70%);
-        -webkit-mask-image: radial-gradient(ellipse 80% 50% at 50% 40%, black 20%, transparent 70%);
+      /* Desktop nav */
+      .menu-toggle{display:none}
+      .nav-menu{
+        all:unset;
+        display:flex;align-items:center;gap:0.5rem;
       }
-      .hero-glow { width: 400px; height: 400px; }
-      .hero-terminal .term-body { font-size: 0.72rem; padding: 14px; }
-
-      /* Feature cards tighter padding */
-      .feature-card { padding: 1.75rem 1.5rem; }
-
-      /* Tool items touch-friendly */
-      .tool-item { padding: 1rem 1.25rem; gap: 12px; }
-      .tool-item .ti { width: 30px; height: 30px; font-size: 0.85rem; }
-
-      /* Code card smaller font */
-      .code-card .code-body { font-size: 0.72rem; padding: 1.25rem; }
-
-      /* Integration cards */
-      .integ-card { padding: 1rem; }
-      .integ-card .ii { width: 34px; height: 34px; font-size: 1rem; }
-
-      /* Section sub tighter */
-      .section-sub { font-size: 0.95rem; }
-    }
-    /* Extra-small mobile (320px — 575px) */
-    @media (max-width: 575.98px) {
-      /* ── Hero ── */
-      .hero { padding-top: 3.5rem; }
-      .hero h1 { font-size: 1.7rem; }
-      .hero p { font-size: 0.9rem; margin-bottom: 1.5rem; max-width: 100%; }
-      .hero-actions { flex-direction: column; }
-      .hero-actions .btn-primary-solid,
-      .hero-actions .btn-secondary-solid {
-        width: 100%;
-        justify-content: center;
+      .nav-menu a{
+        font-size:0.83rem;font-weight:500;
+        padding:0.4rem 0.7rem;border-radius:var(--radius-sm);
+        color:var(--text-dim);
+        transition:color 0.2s, background 0.2s;
       }
-      .hero-stat-row { flex-direction: column; gap: 1rem; align-items: center; text-align: center; }
-      .hero-stat { text-align: center; }
-      .hero-label { font-size: 0.7rem; padding: 4px 10px 4px 8px; }
-      .hero-terminal .term-header { padding: 10px 12px; }
-      .hero-terminal .term-body { font-size: 0.62rem; padding: 10px; line-height: 1.55; }
-      .hero-glow { width: 280px; height: 280px; top: -10%; }
-      .hero-grid-bg {
-        background-size: 25px 25px;
-        mask-image: radial-gradient(ellipse 90% 50% at 50% 40%, black 20%, transparent 70%);
-        -webkit-mask-image: radial-gradient(ellipse 90% 50% at 50% 40%, black 20%, transparent 70%);
+      .nav-menu a:hover{color:var(--text);background:rgba(255,255,255,0.03)}
+      .nav-menu .nav-cta{
+        margin-top:0;margin-left:0.5rem;
+        padding:0.45rem 1.1rem;font-size:0.82rem;
       }
 
-      /* ── Navbar ── */
-      .navbar .navbar-toggler i { font-size: 1.6rem !important; }
-      .navbar .nav-link { padding: 0.75rem 1rem !important; font-size: 0.95rem; }
-      .navbar .btn-ghost { width: 100%; justify-content: center; padding: 0.6rem 1rem; }
-      .navbar-brand { font-size: 1rem; }
-      .navbar-brand .logo-mark { width: 24px; height: 24px; font-size: 0.75rem; }
+      /* Hero */
+      .hero{padding:7rem 0 4rem}
+      .hero h1{font-size:clamp(2.4rem, 6vw, 3.8rem)}
+      .hero-sub{font-size:1rem}
+      .hero-actions{flex-direction:row;justify-content:center}
+      .hero-stats{gap:2rem;padding:1.5rem 0}
+      .hero-stat-num{font-size:1.5rem}
+      .hero-stat-label{font-size:0.75rem}
 
-      /* ── Sections ── */
-      section { padding: 3rem 0; }
-      .section-heading { font-size: 1.35rem; }
-      .section-sub { font-size: 0.85rem; line-height: 1.55; }
+      .hero-terminal{margin-top:0}
+      .term-body{font-size:0.76rem;padding:16px}
 
-      /* ── Features ── */
-      .feature-card { padding: 1.25rem 1rem; }
-      .feature-card .icon { width: 34px; height: 34px; font-size: 0.95rem; margin-bottom: 0.9rem; }
-      .feature-card h4 { font-size: 0.9rem; }
-      .feature-card p { font-size: 0.8rem; }
+      .features-grid{grid-template-columns:repeat(2,1fr)}
+      .f-card{padding:1.75rem 1.5rem}
 
-      /* ── Tools ── */
-      .tool-item { padding: 0.85rem 1rem; gap: 10px; }
-      .tool-item .ti { width: 26px; height: 26px; font-size: 0.72rem; }
-      .tool-item .ti-desc strong { font-size: 0.78rem; }
-      .tool-item .ti-desc span { font-size: 0.7rem; }
+      .steps{margin-top:2rem}
+      .step{padding:1.125rem 0}
 
-      /* ── Code card & steps ── */
-      .code-card .code-body { font-size: 0.6rem; padding: 0.85rem; line-height: 1.5; }
-      .step-flow { gap: 1.5rem; }
-      .step-item { max-width: 100%; padding: 0 0.5rem; }
-      .step-num { width: 34px; height: 34px; font-size: 0.75rem; }
-      .step-item h5 { font-size: 0.85rem; }
-      .step-item p { font-size: 0.75rem; }
+      .tools-grid{grid-template-columns:repeat(2,1fr)}
+      .t-item{padding:1rem 1.25rem}
 
-      /* ── Integrations ── */
-      .integ-card { padding: 0.75rem 0.85rem; gap: 10px; }
-      .integ-card .ii { width: 28px; height: 28px; font-size: 0.8rem; }
-      .integ-card .ii-label strong { font-size: 0.78rem; }
-      .integ-card .ii-label span { font-size: 0.65rem; }
+      .integ-grid{grid-template-columns:repeat(3,1fr)}
 
-      /* ── CTA ── */
-      .cta-box { padding: 1.75rem 1rem; }
-      .cta-box h2 { font-size: 1.3rem; }
-      .cta-box p { font-size: 0.85rem; }
-      .cta-actions { flex-direction: column; }
-      .cta-actions .btn-cta-primary,
-      .cta-actions .btn-cta-ghost {
-        width: 100%;
-        justify-content: center;
+      .cta-box{padding:3rem 2.5rem}
+      .cta-actions{flex-direction:row;justify-content:center}
+
+      .footer-inner{flex-direction:row;justify-content:space-between;text-align:left}
+      .footer-copy{margin-left:auto}
+    }
+
+    /* ════════════════════════════════════════════════════════
+       DESKTOP  (1024px+)
+       ════════════════════════════════════════════════════════ */
+    @media (min-width: 1024px){
+      .header-inner{height:64px}
+      .nav-menu{gap:0.75rem}
+      .nav-menu a{font-size:0.85rem;padding:0.5rem 0.85rem}
+
+      .hero{padding:8rem 0 5rem}
+      .hero > .container{display:grid;grid-template-columns:1fr 1fr;gap:2.5rem;align-items:center}
+      .hero-content{margin-bottom:0}
+      .hero h1{font-size:3.5rem;margin-bottom:1.25rem}
+      .hero-sub{font-size:1.05rem;margin-bottom:2rem}
+      .hero-stats{justify-content:flex-start;gap:3rem}
+      .hero-stat:first-child{text-align:left}
+
+      section{padding:5rem 0}
+      .section-heading{font-size:2.2rem}
+
+      .features-grid{grid-template-columns:repeat(3,1fr)}
+      .f-card{padding:2rem 1.75rem}
+      /* on 3-col grid, accent every even card in each row */
+      .f-card:nth-child(even)::before{opacity:1}
+      .f-card:nth-child(even){border-left:none}
+
+      .setup-grid{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:2.5rem;
+        align-items:center;
       }
+      .steps{margin-top:0}
 
-      /* ── Shimmer — reduce animation complexity on mobile ── */
-      .shimmer-text { animation-duration: 6s; }
+      .tools-grid{grid-template-columns:repeat(2,1fr)}
 
-      /* ── Footer ── */
-      footer { padding: 1.5rem 0; }
-      footer .brand { font-size: 0.85rem; }
+      .integ-grid{grid-template-columns:repeat(4,1fr);gap:12px}
+
+      .cta-box{padding:4rem 3rem}
     }
 
-    /* Touch targets — 44px minimum for touch devices */
-    @media (hover: none) and (pointer: coarse) {
-      .navbar .nav-link,
-      .navbar .btn-ghost,
-      .navbar .navbar-toggler,
-      .btn-primary-solid,
-      .btn-secondary-solid,
-      .btn-cta-primary,
-      .btn-cta-ghost {
-        min-height: 44px;
+    /* ════════════════════════════════════════════════════════
+       TOUCH TARGETS
+       ════════════════════════════════════════════════════════ */
+    @media (hover: none) and (pointer: coarse){
+      .btn-primary,.btn-secondary,.nav-menu .nav-cta,.t-item,.i-card{
+        min-height:48px;
       }
-    }
-
-    /* ── Prevent double-tap zoom delay on interactive elements ── */
-    .nav-link, .navbar-toggler, .btn-ghost, .btn-primary-solid,
-    .btn-secondary-solid, .btn-cta-primary, .btn-cta-ghost,
-    .feature-card, .tool-item, .integ-card {
-      touch-action: manipulation;
-    }
-
-    /* ═══════════════════════════════════════════
-       GRADIENT ANIMATION FOR ACCENT TEXT
-       ═══════════════════════════════════════════ */
-    @keyframes shimmer {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
-    .shimmer-text {
-      background: linear-gradient(135deg, var(--accent) 0%, #3b82f6 30%, #60a5fa 60%, var(--accent) 100%);
-      background-size: 200% auto;
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-      animation: shimmer 4s var(--ease-in-out) infinite;
     }
   </style>
 </head>
 <body>
 
-  <!-- ═══ NAVBAR ═══ -->
-  <nav class="navbar navbar-expand-lg fixed-top" id="mainNav">
-    <div class="container">
-      <a class="navbar-brand" href="#">
-        <span class="logo-mark"><i class="bi bi-clipboard2-check-fill"></i></span>
-        PM Agent
+<!-- ═══ BRAND STRIP ═══ -->
+<div class="brand-strip"></div>
+
+<!-- ═══ HEADER ═══ -->
+<header class="page-header" id="header">
+  <div class="container header-inner">
+    <a href="#" class="logo">
+      <span class="logo-mark">&#10003;</span>
+      PM Agent
+    </a>
+    <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+    <nav class="nav-menu" id="navMenu" role="navigation" aria-label="Main navigation">
+      <a href="#features">Features</a>
+      <a href="#how-it-works">How It Works</a>
+      <a href="#tools">Tools</a>
+      <a href="#integrations">Integrations</a>
+      <a href="https://github.com/Gida-concept/Memorise" target="_blank" class="nav-cta">
+        GitHub &#8599;
       </a>
-      <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
-        <i class="bi bi-list" style="font-size:1.4rem;color:var(--text-primary);"></i>
-      </button>
-      <div class="collapse navbar-collapse" id="navMenu">
-        <ul class="navbar-nav mx-auto">
-          <li class="nav-item"><a class="nav-link" href="#features">Features</a></li>
-          <li class="nav-item"><a class="nav-link" href="#how-it-works">How It Works</a></li>
-          <li class="nav-item"><a class="nav-link" href="#tools">Tools</a></li>
-          <li class="nav-item"><a class="nav-link" href="#integrations">Integrations</a></li>
-        </ul>
-        <a class="btn-ghost" href="https://github.com/Gida-concept/Memorise" target="_blank">
-          <i class="bi bi-github"></i> GitHub
+    </nav>
+  </div>
+</header>
+
+<!-- ═══ HERO ═══ -->
+<section class="hero" id="hero">
+  <div class="hero-bg-glow"></div>
+  <div class="hero-bg-glow-2"></div>
+
+  <div class="container">
+    <!-- heading content -->
+    <div class="hero-content">
+      <div class="hero-badge reveal visible">
+        <span class="dot"></span>
+        v0.1 &mdash; MCP Server
+      </div>
+
+      <h1 class="reveal visible reveal-d1">
+        Your AI sees<br />
+        <span class="gradient-text">the full picture</span>.
+      </h1>
+
+      <p class="hero-sub reveal visible reveal-d2">
+        PM Agent is an MCP server that gives your AI coding assistant
+        structured awareness of decisions, blockers, scope, and rules&mdash;
+        so it works with context, not just code.
+      </p>
+
+      <div class="hero-actions reveal visible reveal-d3">
+        <a href="https://github.com/Gida-concept/Memorise" target="_blank" class="btn-primary">
+          View on GitHub &#8599;
+        </a>
+        <a href="#how-it-works" class="btn-secondary">
+          How It Works
         </a>
       </div>
-    </div>
-  </nav>
 
-  <!-- ═══ HERO ═══ -->
-  <section class="hero" id="hero">
-    <div class="hero-grid-bg"></div>
-    <div class="hero-glow"></div>
-    <div class="container position-relative">
-      <div class="row align-items-center g-5">
-        <div class="col-lg-6">
-          <div class="hero-label reveal visible">
-            <span class="dot"></span>
-            v1.0 &mdash; Model Context Protocol Server
-          </div>
-          <h1 class="reveal visible reveal-delay-1">
-            Project context<br />
-            for <span class="accent shimmer-text">AI coding</span><br />
-            assistants.
-          </h1>
-          <p class="reveal visible reveal-delay-2">
-            PM Agent is an MCP server that gives your AI structured awareness of
-            decisions, blockers, rules, and scope&mdash;so it codes with the
-            full picture, not just the file tree.
-          </p>
-          <div class="hero-actions reveal visible reveal-delay-3">
-            <a href="https://github.com/Gida-concept/Memorise" target="_blank" class="btn-primary-solid">
-              <i class="bi bi-github"></i> View on GitHub
-            </a>
-            <a href="#how-it-works" class="btn-secondary-solid">
-              <i class="bi bi-arrow-down"></i> How It Works
-            </a>
-          </div>
-          <div class="hero-stat-row reveal visible reveal-delay-4">
-            <div class="hero-stat">
-              <h4>17+ <span class="sub">tools</span></h4>
-              <p>MCP server endpoints</p>
-            </div>
-            <div class="hero-stat">
-              <h4>7 <span class="sub">integrations</span></h4>
-              <p>Claude Code, Cursor, Zed &amp; more</p>
-            </div>
-            <div class="hero-stat">
-              <h4>0 <span class="sub">dependencies</span></h4>
-              <p>No API keys, no accounts</p>
-            </div>
-          </div>
+      <div class="hero-stats reveal visible reveal-d4">
+        <div class="hero-stat">
+          <div class="hero-stat-num">17<span class="suffix">tools</span></div>
+          <div class="hero-stat-label">MCP endpoints</div>
         </div>
-        <div class="col-lg-6 reveal visible reveal-delay-3">
-          <div class="hero-terminal">
-            <div class="term-header">
-              <span class="term-dot"></span>
-              <span class="term-dot"></span>
-              <span class="term-dot"></span>
-              <span class="term-title">~ — claude</span>
-            </div>
-            <div class="term-body">
-              <span class="prompt">$</span> <span class="highlight">What are my current blockers?</span><br />
-              <span class="dim">│</span><br />
-              <span class="dim">│</span> Found 2 active blockers:<br />
-              <span class="dim">│</span> <span class="highlight">PR #442</span> — Awaiting review (3 days)<br />
-              <span class="dim">│</span> <span class="highlight">ADR-004</span> — Stakeholder sign-off pending<br />
-              <span class="dim">│</span><br />
-              <span class="prompt">$</span> <span class="highlight">Can we add dark mode to this sprint?</span><br />
-              <span class="dim">│</span><br />
-              <span class="dim">│</span> <span class="string">[scope_check]</span> +5 days needed, 4 days remain<br />
-              <span class="dim">│</span> Risk: <span class="string">HIGH</span>. Not recommended without descoping.
-            </div>
-          </div>
+        <div class="hero-stat">
+          <div class="hero-stat-num">7<span class="suffix">clients</span></div>
+          <div class="hero-stat-label">Supported editors</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-num">0<span class="suffix">setup</span></div>
+          <div class="hero-stat-label">API keys needed</div>
         </div>
       </div>
     </div>
-  </section>
 
-  <!-- ═══ FEATURES ═══ -->
-  <section id="features">
-    <div class="container">
-      <div class="row mb-5">
-        <div class="col-lg-8 reveal">
-          <div class="section-label"><i class="bi bi-lightning-fill"></i> Features</div>
-          <h2 class="section-heading">What your AI sees<br />when PM Agent is connected.</h2>
-          <p class="section-sub">Every tool follows the Model Context Protocol. Your assistant picks the right one&mdash;you just ask naturally.</p>
-        </div>
+    <!-- terminal -->
+    <div class="hero-terminal reveal visible reveal-d3">
+      <div class="term-head">
+        <span class="term-dot"></span>
+        <span class="term-dot"></span>
+        <span class="term-dot"></span>
+        <span class="term-label">~ — claude</span>
       </div>
-      <div class="feature-grid reveal">
-        <div class="feature-card">
-          <div class="icon"><i class="bi bi-journal-check"></i></div>
-          <h4>Decision Tracking</h4>
-          <p>Log ADRs with full rationale. Your AI queries, links, and enforces them across sessions.</p>
-        </div>
-        <div class="feature-card">
-          <div class="icon"><i class="bi bi-shield-exclamation"></i></div>
-          <h4>Blocker Management</h4>
-          <p>Track and resolve blockers. Your AI knows what's stuck and suggests unblock strategies.</p>
-        </div>
-        <div class="feature-card">
-          <div class="icon"><i class="bi bi-diagram-3"></i></div>
-          <h4>Dependency Mapping</h4>
-          <p>See how decisions, tasks, and code connect. Know the blast radius before making changes.</p>
-        </div>
-        <div class="feature-card">
-          <div class="icon"><i class="bi bi-rulers"></i></div>
-          <h4>Scope Analysis</h4>
-          <p>Check feature requests against sprint capacity. Your AI knows what fits and what's too risky.</p>
-        </div>
-        <div class="feature-card">
-          <div class="icon"><i class="bi bi-gear-wide"></i></div>
-          <h4>Rules Engine</h4>
-          <p>Define hard or soft PM rules. Your AI catches violations before they land in production.</p>
-        </div>
-        <div class="feature-card">
-          <div class="icon"><i class="bi bi-code-square"></i></div>
-          <h4>Codebase Scanning</h4>
-          <p>Scan affected modules when a decision changes. PM context meets source code.</p>
-        </div>
+      <div class="term-body">
+        <span class="prompt">$</span> <span class="hl">What are my current blockers?</span><br />
+        <span class="dim">│</span><br />
+        <span class="dim">│</span> <span class="out">Found 2 active blockers:</span><br />
+        <span class="dim">│</span> <span class="hl">PR #442</span> <span class="out">&mdash; Awaiting review (3d)</span><br />
+        <span class="dim">│</span> <span class="hl">ADR-004</span> <span class="out">&mdash; Stakeholder sign-off pending</span><br />
+        <span class="dim">│</span><br />
+        <span class="prompt">$</span> <span class="hl">Can dark mode fit this sprint?</span><br />
+        <span class="dim">│</span><br />
+        <span class="dim">│</span> <span class="str">[scope_check]</span> <span class="out">+5d needed, 4d remain</span><br />
+        <span class="dim">│</span> <span class="out">Risk: </span><span class="str">HIGH</span><span class="out">. Not recommended.</span>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- ═══ HOW IT WORKS ═══ -->
-  <section id="how-it-works">
-    <div class="container">
-      <div class="row mb-5">
-        <div class="col-lg-8 reveal">
-          <div class="section-label"><i class="bi bi-terminal-plus"></i> Setup</div>
-          <h2 class="section-heading">One config block,<br />instant project awareness.</h2>
-          <p class="section-sub wide">No API keys, no accounts, no global installs. Add this to your MCP config and restart.</p>
-        </div>
+<!-- ═══ FEATURES ═══ -->
+<section id="features">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-tag">Features</div>
+      <h2 class="section-heading">What your AI sees<br />when PM Agent is connected.</h2>
+      <p class="section-sub">Every tool follows the Model Context Protocol. Your assistant picks the right one&mdash;you just ask naturally.</p>
+    </div>
+
+    <div class="features-grid reveal reveal-d1">
+      <div class="f-card">
+        <div class="f-icon">&#9998;</div>
+        <h4>Decision Tracking</h4>
+        <p>Log ADRs with full rationale. Your AI queries, links, and enforces them across sessions.</p>
       </div>
-      <div class="row g-5 align-items-center">
-        <div class="col-lg-6 reveal">
-          <div class="code-card">
-            <div class="code-body">
-<span class="comment">// .mcp.json — project-level config for Claude Code</span><br />
+      <div class="f-card">
+        <div class="f-icon">&#9888;</div>
+        <h4>Blocker Management</h4>
+        <p>Track and resolve blockers. Your AI knows what&#8217;s stuck and suggests unblock strategies.</p>
+      </div>
+      <div class="f-card">
+        <div class="f-icon">&#8801;</div>
+        <h4>Dependency Mapping</h4>
+        <p>See how decisions, tasks, and code connect. Know the blast radius before making changes.</p>
+      </div>
+      <div class="f-card">
+        <div class="f-icon">&#8999;</div>
+        <h4>Scope Analysis</h4>
+        <p>Check feature requests against sprint capacity. Your AI knows what fits and what&#8217;s risky.</p>
+      </div>
+      <div class="f-card">
+        <div class="f-icon">&#9881;</div>
+        <h4>Rules Engine</h4>
+        <p>Define hard or soft PM rules. The engine catches violations before they reach production.</p>
+      </div>
+      <div class="f-card">
+        <div class="f-icon">&#9003;</div>
+        <h4>Codebase Scanning</h4>
+        <p>Scan affected modules when a decision changes. PM context meets source code.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ HOW IT WORKS ═══ -->
+<section id="how-it-works">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-tag">Setup</div>
+      <h2 class="section-heading">One config block,<br />instant project awareness.</h2>
+      <p class="section-sub">No API keys, no accounts, no global installs. Add this to your MCP config and restart.</p>
+    </div>
+
+    <div class="setup-grid" style="margin-top:2.5rem">
+      <div class="code-block reveal reveal-d1">
+        <div class="code-top">
+          <span class="term-dot"></span>
+          <span class="term-dot"></span>
+          <span class="term-dot"></span>
+          <span class="term-label">.mcp.json</span>
+        </div>
+        <div class="code-body">
+<span class="cm">// project-level config</span><br />
 {<br />
-&nbsp;&nbsp;<span class="key">"mcpServers"</span>: {<br />
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"pm-agent"</span>: {<br />
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"type"</span>: <span class="string">"stdio"</span>,<br />
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"command"</span>: <span class="string">"npx"</span>,<br />
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"args"</span>: [<span class="string">"-y"</span>, <span class="string">"@gida-concept/pm-agent-mcp-server"</span>]<br />
+&nbsp;&nbsp;<span class="kw">"mcpServers"</span>: {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">"pm-agent"</span>: {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">"type"</span>: <span class="st">"stdio"</span>,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">"command"</span>: <span class="st">"npx"</span>,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">"args"</span>: [<span class="st">"-y"</span>, <span class="st">"@gida-concept/pm-agent-mcp-server"</span>]<br />
 &nbsp;&nbsp;&nbsp;&nbsp;}<br />
 &nbsp;&nbsp;}<br />
 }
-            </div>
+        </div>
+      </div>
+
+      <div class="steps reveal reveal-d2">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h5>Install</h5>
+            <p>Node.js v18+. Nothing to install&mdash;npx handles the download.</p>
           </div>
         </div>
-        <div class="col-lg-6 reveal reveal-delay-1">
-          <div class="step-flow">
-            <div class="step-item">
-              <div class="step-num">1</div>
-              <h5>Install</h5>
-              <p>Node.js v18+ required.<br />Nothing else to install&mdash;npx handles it.</p>
-            </div>
-            <div class="step-item">
-              <div class="step-num">2</div>
-              <h5>Configure</h5>
-              <p>Drop the JSON snippet into your AI tool's MCP config.</p>
-            </div>
-            <div class="step-item">
-              <div class="step-num">3</div>
-              <h5>Restart</h5>
-              <p>MCP config loads on startup. Restart your editor or CLI.</p>
-            </div>
-            <div class="step-item">
-              <div class="step-num">4</div>
-              <h5>Go</h5>
-              <p>Ask naturally: <em>"What's blocking me?"</em> &mdash; PM Agent handles the rest.</p>
-            </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h5>Configure</h5>
+            <p>Drop the JSON snippet into your AI tool&#8217;s MCP config file.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h5>Restart</h5>
+            <p>MCP configs load on startup. Restart your editor or CLI session.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <h5>Go</h5>
+            <p>Ask naturally: <em>&#8220;What&#8217;s blocking me?&#8221;</em> &mdash; PM Agent handles the rest.</p>
           </div>
         </div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- ═══ TOOLS ═══ -->
-  <section id="tools">
-    <div class="container">
-      <div class="row mb-5">
-        <div class="col-lg-8 reveal">
-          <div class="section-label"><i class="bi bi-grid-3x3-gap"></i> MCP Tools</div>
-          <h2 class="section-heading">Every tool your AI<br />needs to manage context.</h2>
-          <p class="section-sub">17+ endpoints covering decisions, blockers, scope, rules, dependencies, and codebase scanning.</p>
-        </div>
+<!-- ═══ TOOLS ═══ -->
+<section id="tools">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-tag">MCP Tools</div>
+      <h2 class="section-heading">Every tool your AI<br />needs to manage context.</h2>
+      <p class="section-sub">17+ endpoints covering decisions, blockers, scope, rules, dependencies, and codebase scanning.</p>
+    </div>
+
+    <div class="tools-grid reveal reveal-d1">
+      <div class="t-item">
+        <div class="t-i">&#9432;</div>
+        <div class="t-desc"><strong>pm_get_context</strong><span>Project overview &mdash; blockers, decisions, scope</span></div>
       </div>
-      <div class="tools-list reveal">
-        <div class="tool-item">
-          <div class="ti"><i class="bi bi-info-circle"></i></div>
-          <div class="ti-desc">
-            <strong>pm_get_context</strong>
-            <span>Project overview &mdash; blockers, decisions, tasks, scope</span>
-          </div>
-        </div>
-        <div class="tool-item">
-          <div class="ti"><i class="bi bi-journal-plus"></i></div>
-          <div class="ti-desc">
-            <strong>pm_log_decision</strong>
-            <span>Record an architectural or process decision</span>
-          </div>
-        </div>
-        <div class="tool-item">
-          <div class="ti"><i class="bi bi-exclamation-triangle"></i></div>
-          <div class="ti-desc">
-            <strong>pm_add_blocker</strong>
-            <span>Log a new blocker with description and severity</span>
-          </div>
-        </div>
-        <div class="tool-item">
-          <div class="ti"><i class="bi bi-check2-circle"></i></div>
-          <div class="ti-desc">
-            <strong>pm_resolve_blocker</strong>
-            <span>Mark a blocker as resolved</span>
-          </div>
-        </div>
-        <div class="tool-item">
-          <div class="ti"><i class="bi bi-pencil-square"></i></div>
-          <div class="ti-desc">
-            <strong>pm_add_note</strong>
-            <span>Save an observation or insight</span>
-          </div>
-        </div>
-        <div class="tool-item">
-          <div class="ti"><i class="bi bi-rulers"></i></div>
-          <div class="ti-desc">
-            <strong>pm_scope_check</strong>
-            <span>Check feature fit against sprint capacity</span>
-          </div>
-        </div>
-        <div class="tool-item">
-          <div class="ti"><i class="bi bi-bookmark-check"></i></div>
-          <div class="ti-desc">
-            <strong>pm_add_rule</strong>
-            <span>Add a PM rule with hard or soft enforcement</span>
-          </div>
-        </div>
-        <div class="tool-item">
-          <div class="ti"><i class="bi bi-search"></i></div>
-          <div class="ti-desc">
-            <strong>pm_scan_codebase</strong>
-            <span>Scan code affected by a decision or change</span>
-          </div>
-        </div>
-        <div class="tool-item">
-          <div class="ti"><i class="bi bi-boxes"></i></div>
-          <div class="ti-desc">
-            <strong>pm_analyze_dependencies</strong>
-            <span>Map dependency chains between tasks and code</span>
-          </div>
-        </div>
-        <div class="tool-item">
-          <div class="ti"><i class="bi bi-clock-history"></i></div>
-          <div class="ti-desc">
-            <strong>pm_get_timeline</strong>
-            <span>Activity timeline for recent project changes</span>
-          </div>
-        </div>
-        <div class="tool-item">
-          <div class="ti"><i class="bi bi-clipboard-data"></i></div>
-          <div class="ti-desc">
-            <strong>pm_get_rules</strong>
-            <span>List all active PM rules</span>
-          </div>
-        </div>
-        <div class="tool-item">
-          <div class="ti"><i class="bi bi-flag"></i></div>
-          <div class="ti-desc">
-            <strong>pm_check_rules</strong>
-            <span>Check a proposed action against active rules</span>
-          </div>
-        </div>
+      <div class="t-item">
+        <div class="t-i">&#9998;</div>
+        <div class="t-desc"><strong>pm_log_decision</strong><span>Record an architectural or process decision</span></div>
+      </div>
+      <div class="t-item">
+        <div class="t-i">&#9888;</div>
+        <div class="t-desc"><strong>pm_add_blocker</strong><span>Log a new blocker with description and severity</span></div>
+      </div>
+      <div class="t-item">
+        <div class="t-i">&#10003;</div>
+        <div class="t-desc"><strong>pm_resolve_blocker</strong><span>Mark a blocker as resolved</span></div>
+      </div>
+      <div class="t-item">
+        <div class="t-i">&#9997;</div>
+        <div class="t-desc"><strong>pm_add_note</strong><span>Save an observation or insight</span></div>
+      </div>
+      <div class="t-item">
+        <div class="t-i">&#8999;</div>
+        <div class="t-desc"><strong>pm_scope_check</strong><span>Check feature fit against sprint capacity</span></div>
+      </div>
+      <div class="t-item">
+        <div class="t-i">&#9881;</div>
+        <div class="t-desc"><strong>pm_add_rule</strong><span>Add a PM rule with hard or soft enforcement</span></div>
+      </div>
+      <div class="t-item">
+        <div class="t-i">&#128269;</div>
+        <div class="t-desc"><strong>pm_scan_codebase</strong><span>Scan code affected by a decision or change</span></div>
+      </div>
+      <div class="t-item">
+        <div class="t-i">&#9744;</div>
+        <div class="t-desc"><strong>pm_analyze_dependencies</strong><span>Map dependency chains between tasks and code</span></div>
+      </div>
+      <div class="t-item">
+        <div class="t-i">&#128339;</div>
+        <div class="t-desc"><strong>pm_get_timeline</strong><span>Activity timeline for recent project changes</span></div>
+      </div>
+      <div class="t-item">
+        <div class="t-i">&#128203;</div>
+        <div class="t-desc"><strong>pm_get_rules</strong><span>List all active PM rules</span></div>
+      </div>
+      <div class="t-item">
+        <div class="t-i">&#9878;</div>
+        <div class="t-desc"><strong>pm_check_rules</strong><span>Check a proposed action against active rules</span></div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- ═══ INTEGRATIONS ═══ -->
-  <section id="integrations">
-    <div class="container">
-      <div class="row mb-5">
-        <div class="col-lg-8 reveal">
-          <div class="section-label"><i class="bi bi-puzzle-fill"></i> Integration</div>
-          <h2 class="section-heading">Works with every major<br />AI coding tool.</h2>
-          <p class="section-sub">Standard MCP &mdash; one config format works across all clients.</p>
-        </div>
+<!-- ═══ INTEGRATIONS ═══ -->
+<section id="integrations">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-tag">Integration</div>
+      <h2 class="section-heading">Works with every major<br />AI coding tool.</h2>
+      <p class="section-sub">Standard MCP &mdash; one config format across all clients.</p>
+    </div>
+
+    <div class="integ-grid reveal reveal-d1">
+      <div class="i-card">
+        <div class="i-icon">&#128172;</div>
+        <div class="i-label"><strong>Claude Code</strong><span>.mcp.json / ~/.claude.json</span></div>
       </div>
-      <div class="integration-grid reveal">
-        <div class="integ-card">
-          <div class="ii"><i class="bi bi-chat-dots-fill"></i></div>
-          <div class="ii-label">
-            <strong>Claude Code</strong>
-            <span>.mcp.json / ~/.claude.json</span>
-          </div>
-        </div>
-        <div class="integ-card">
-          <div class="ii"><i class="bi bi-cursor-fill"></i></div>
-          <div class="ii-label">
-            <strong>Cursor</strong>
-            <span>.cursor/mcp.json</span>
-          </div>
-        </div>
-        <div class="integ-card">
-          <div class="ii"><i class="bi bi-code-slash"></i></div>
-          <div class="ii-label">
-            <strong>VS Code</strong>
-            <span>.vscode/mcp.json</span>
-          </div>
-        </div>
-        <div class="integ-card">
-          <div class="ii"><i class="bi bi-terminal-plus"></i></div>
-          <div class="ii-label">
-            <strong>OpenCode</strong>
-            <span>opencode.json</span>
-          </div>
-        </div>
-        <div class="integ-card">
-          <div class="ii"><i class="bi bi-arrow-right-square"></i></div>
-          <div class="ii-label">
-            <strong>Continue.dev</strong>
-            <span>config.json / config.yaml</span>
-          </div>
-        </div>
-        <div class="integ-card">
-          <div class="ii"><i class="bi bi-braces"></i></div>
-          <div class="ii-label">
-            <strong>Zed</strong>
-            <span>settings.json</span>
-          </div>
-        </div>
-        <div class="integ-card">
-          <div class="ii"><i class="bi bi-robot"></i></div>
-          <div class="ii-label">
-            <strong>Codex CLI</strong>
-            <span>codexrc.toml</span>
-          </div>
-        </div>
-        <div class="integ-card">
-          <div class="ii"><i class="bi bi-plugin"></i></div>
-          <div class="ii-label">
-            <strong>Any MCP Client</strong>
-            <span>Standard stdio MCP</span>
-          </div>
-        </div>
+      <div class="i-card">
+        <div class="i-icon">&#129302;</div>
+        <div class="i-label"><strong>Cursor</strong><span>.cursor/mcp.json</span></div>
+      </div>
+      <div class="i-card">
+        <div class="i-icon">&#128187;</div>
+        <div class="i-label"><strong>VS Code</strong><span>.vscode/mcp.json</span></div>
+      </div>
+      <div class="i-card">
+        <div class="i-icon">&#9000;</div>
+        <div class="i-label"><strong>Zed</strong><span>settings.json</span></div>
+      </div>
+      <div class="i-card">
+        <div class="i-icon">&#9889;</div>
+        <div class="i-label"><strong>Continue.dev</strong><span>config.json / config.yaml</span></div>
+      </div>
+      <div class="i-card">
+        <div class="i-icon">&#123;</div>
+        <div class="i-label"><strong>OpenCode</strong><span>opencode.json</span></div>
+      </div>
+      <div class="i-card">
+        <div class="i-icon">&#129302;</div>
+        <div class="i-label"><strong>Codex CLI</strong><span>codexrc.toml</span></div>
+      </div>
+      <div class="i-card">
+        <div class="i-icon">&#9881;</div>
+        <div class="i-label"><strong>Any MCP Client</strong><span>Standard stdio MCP</span></div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- ═══ CTA ═══ -->
-  <section id="cta">
-    <div class="container">
-      <div class="cta-box reveal">
-        <h2>Give your AI the full picture.</h2>
-        <p>Drop in one config block, restart your editor, and your AI starts seeing project context. No API keys, no accounts, no setup tax.</p>
-        <div class="cta-actions">
-          <a href="https://github.com/Gida-concept/Memorise" target="_blank" class="btn-cta-primary">
-            <i class="bi bi-github"></i> Get Started on GitHub
-          </a>
-          <a href="https://github.com/Gida-concept/Memorise/blob/master/README.md" target="_blank" class="btn-cta-ghost">
-            <i class="bi bi-book"></i> Read the Docs
-          </a>
-        </div>
+<!-- ═══ CTA ═══ -->
+<section id="cta" style="padding-bottom:3.5rem">
+  <div class="container">
+    <div class="cta-box reveal">
+      <h2>Give your AI the full picture.</h2>
+      <p>Drop in one config block, restart your editor, and your AI starts seeing project context. No API keys, no accounts, no setup tax.</p>
+      <div class="cta-actions">
+        <a href="https://github.com/Gida-concept/Memorise" target="_blank" class="btn-primary">
+          Get Started on GitHub &#8599;
+        </a>
+        <a href="https://github.com/Gida-concept/Memorise/blob/master/README.md" target="_blank" class="btn-secondary">
+          Read the Docs
+        </a>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- ═══ FOOTER ═══ -->
-  <footer>
-    <div class="container">
-      <div class="row align-items-center g-3">
-        <div class="col-md-4">
-          <a class="brand" href="#">
-            <span class="logo-mark"><i class="bi bi-clipboard2-check-fill"></i></span>
-            PM Agent
-          </a>
-        </div>
-        <div class="col-md-4 text-md-center">
-          <a href="https://github.com/Gida-concept/Memorise" target="_blank" class="me-3"><i class="bi bi-github me-1"></i> GitHub</a>
-          <a href="https://github.com/Gida-concept/Memorise/blob/master/README.md" target="_blank"><i class="bi bi-book me-1"></i> Docs</a>
-        </div>
-        <div class="col-md-4 text-md-end copyright">
-          &copy; 2026 Gida Concept &middot; MIT License
-        </div>
-      </div>
+<!-- ═══ FOOTER ═══ -->
+<footer class="page-footer">
+  <div class="container footer-inner">
+    <a href="#" class="footer-logo">
+      <span class="logo-mark">&#10003;</span>
+      PM Agent
+    </a>
+    <div class="footer-links">
+      <a href="https://github.com/Gida-concept/Memorise" target="_blank">GitHub</a>
+      <a href="https://github.com/Gida-concept/Memorise/blob/master/README.md" target="_blank">Docs</a>
+      <a href="#features">Features</a>
     </div>
-  </footer>
+    <div class="footer-copy">&copy; 2026 Gida Concept &middot; MIT</div>
+  </div>
+</footer>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-    // ── Sticky navbar ──
-    const nav = document.getElementById('mainNav');
-    const observer = new IntersectionObserver(
-      ([e]) => nav.classList.toggle('is-stuck', !e.isIntersecting),
-      { threshold: 0, rootMargin: '-60px 0px 0px 0px' }
-    );
-    observer.observe(document.querySelector('#hero'));
+<!-- ═══ SCRIPTS ═══ -->
+<script>
+  // ── Mobile menu toggle ──
+  const toggle = document.getElementById('menuToggle');
+  const menu = document.getElementById('navMenu');
 
-    // ── Scroll reveal ──
-    const revealObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-          // stagger children with reveal classes
-          const children = entry.target.querySelectorAll('.reveal');
-          children.forEach((el, i) => {
-            setTimeout(() => el.classList.add('visible'), i * 100);
-          });
-        }
-      });
-    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+  toggle.addEventListener('click', () => {
+    const open = menu.classList.toggle('open');
+    toggle.classList.toggle('open', open);
+    toggle.setAttribute('aria-expanded', open);
+    document.body.style.overflow = open ? 'hidden' : '';
+  });
 
-    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
-
-    // ── Smooth scroll ──
-    document.querySelectorAll('a[href^="#"]').forEach(a => {
-      a.addEventListener('click', e => {
-        const t = document.querySelector(a.getAttribute('href'));
-        if (t) {
-          e.preventDefault();
-          t.scrollIntoView({ behavior: 'smooth' });
-          const navMenu = document.getElementById('navMenu');
-          const bs = bootstrap.Collapse.getInstance(navMenu);
-          if (bs) bs.hide();
-        }
-      });
+  // Close menu on link click
+  menu.querySelectorAll('a').forEach(a => {
+    a.addEventListener('click', () => {
+      menu.classList.remove('open');
+      toggle.classList.remove('open');
+      toggle.setAttribute('aria-expanded', 'false');
+      document.body.style.overflow = '';
     });
+  });
 
-    // ── Terminal cursor blink ──
-    console.log('PM Agent loaded. Give your AI project context.');
-  </script>
+  // ── Sticky nav border ──
+  const header = document.getElementById('header');
+  const heroObs = new IntersectionObserver(
+    ([e]) => header.classList.toggle('is-stuck', !e.isIntersecting),
+    { threshold: 0, rootMargin: '-60px 0px 0px 0px' }
+  );
+  heroObs.observe(document.querySelector('#hero'));
+
+  // ── Scroll reveal ──
+  const revealObs = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        entry.target.querySelectorAll('.reveal').forEach((el, i) => {
+          setTimeout(() => el.classList.add('visible'), i * 100);
+        });
+      }
+    });
+  }, { threshold: 0.08, rootMargin: '0px 0px -50px 0px' });
+
+  document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
+
+  // ── Smooth scroll ──
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const t = document.querySelector(a.getAttribute('href'));
+      if (t) { e.preventDefault(); t.scrollIntoView({ behavior: 'smooth' }); }
+    });
+  });
+</script>
 </body>
 </html>

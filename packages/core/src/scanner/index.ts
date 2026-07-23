@@ -2,6 +2,8 @@ import Database from 'better-sqlite3';
 import { walkProject, hashFile, parseGitignore, type FileEntry, type FileType } from './file-registry.js';
 import { findImports, findCircularDependencies, storeDependencyEdges, clearEdgesForFiles } from './dependency-mapper.js';
 import { detectEntryPoints, detectFramework, detectRole, storeArchitecture } from './architecture-detector.js';
+import { buildProjectMap, type ProjectSemanticMap } from './project-map.js';
+import { analyzeFile } from './semantic-analyzer.js';
 import fs from 'fs';
 import path from 'path';
 import { glob } from 'glob';
@@ -326,4 +328,69 @@ export async function verify(
     deleted_from_disk: deletedFromDisk,
     modified_since_index: modifiedSinceIndex,
   };
+}
+
+/**
+ * Semantic scan. Reads the file registry and produces a project-level
+ * semantic map (frameworks, module organization, entry points, etc.).
+ * Also stores per-file summaries in the file_summaries table.
+ */
+export async function semanticScan(
+  db: Database.Database,
+  root: string,
+): Promise<{ summaryCount: number; projectMap: ProjectSemanticMap }> {
+  // Get registry from DB
+  const registry = db.prepare('SELECT path, hash, size, type, last_indexed_at FROM file_registry').all() as FileEntry[];
+
+  if (registry.length === 0) {
+    return {
+      summaryCount: 0,
+      projectMap: {
+        frameworks: [],
+        entryPoints: [],
+        moduleSummary: { totalFiles: 0, byPurpose: {}, byDirectory: {} },
+        architectureLayers: [],
+        lastUpdated: new Date().toISOString(),
+        topExports: [],
+        topInterfaces: [],
+      },
+    };
+  }
+
+  // Build the project map from registry
+  const projectMap = await buildProjectMap(registry);
+
+  // Store per-file summaries in DB (upsert)
+  const upsertStmt = db.prepare(`
+    INSERT OR REPLACE INTO file_summaries (path, summary, purpose, exports, imports, key_types, generated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  let summaryCount = 0;
+  const now = new Date().toISOString();
+
+  for (const entry of registry) {
+    const ext = entry.path.split('.').pop()?.toLowerCase();
+    if (!ext || ['png', 'jpg', 'gif', 'svg', 'ico', 'woff', 'woff2', 'eot', 'ttf', 'mp4', 'webm'].includes(ext)) {
+      continue;
+    }
+
+    try {
+      const summary = analyzeFile(entry.path);
+      upsertStmt.run(
+        summary.path,
+        summary.summary,
+        summary.purpose,
+        JSON.stringify(summary.exports),
+        JSON.stringify(summary.imports),
+        JSON.stringify(summary.keyTypes),
+        now,
+      );
+      summaryCount++;
+    } catch {
+      // Skip files that can't be analyzed
+    }
+  }
+
+  return { summaryCount, projectMap };
 }

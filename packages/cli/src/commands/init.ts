@@ -1,26 +1,26 @@
 import fs from 'fs';
 import path from 'path';
 import ora from 'ora';
-import { openDb, closeDb, detectIntegrations, DEFAULT_CONFIG_TOML, DEFAULT_RULES_TOML } from '@gida-concept/pm-agent-core';
+import inquirer from 'inquirer';
+import { openDb, closeDb, detectIntegrations, DEFAULT_CONFIG_TOML, DEFAULT_RULES_TOML, generateScaffold } from '@gida-concept/pm-agent-core';
 import type { PmAgentConfig } from '@gida-concept/pm-agent-core';
 import { Colors } from '../formatters.js';
 import { ExitCode } from '../exit-codes.js';
 import { PmCliError } from '../errors.js';
 import { scanCommand } from './scan.js';
+import { installHooks } from './hooks.js';
 
 export async function initCommand(opts: Record<string, any>): Promise<void> {
-  const home = process.env.HOME || process.env.USERPROFILE || '';
-  if (!home) {
-    throw new PmCliError('Cannot determine home directory. Set $HOME or $USERPROFILE.', ExitCode.CONFIG_ERROR);
-  }
+  const projectRoot = process.cwd();
 
-  // Respect PM_AGENT_CONFIG or --config if set; otherwise use ~/.config/pm-agent
-  const configPath = opts.config || process.env.PM_AGENT_CONFIG || path.join(home, '.config', 'pm-agent', 'config.toml');
+  // Respect PM_AGENT_CONFIG or --config if set; otherwise use project-local .pm-agent/
+  const defaultAgentDir = path.join(projectRoot, '.pm-agent');
+  const configPath = opts.config || process.env.PM_AGENT_CONFIG || path.join(defaultAgentDir, 'config.toml');
   const configDir = path.dirname(configPath);
   const rulesPath = path.join(configDir, 'rules.toml');
-  const dataDir = process.env.PM_AGENT_HOME || path.join(home, '.local', 'share', 'pm-agent');
-  const projectName = opts.name || path.basename(process.cwd());
-  const dbPath = path.join(dataDir, `${projectName}.db`);
+  const dataDir = process.env.PM_AGENT_HOME || configDir;
+  const projectName = opts.name || path.basename(projectRoot);
+  const dbPath = path.join(dataDir, 'pm.db');
 
   // Check for existing config
   if (fs.existsSync(configPath) && !opts.force) {
@@ -92,9 +92,117 @@ export async function initCommand(opts: Record<string, any>): Promise<void> {
       // Integration detection failed silently — don't block init
     }
 
-    if (opts.scan) {
-      spinner.text = 'Running initial scan...';
-      await scanCommand({ full: true });
+    // Always run initial scan
+    spinner.text = 'Running initial scan...';
+    await scanCommand({ full: true });
+
+    // Auto-install hooks into .claude/hooks/
+    try {
+      spinner.text = 'Installing PM Agent hooks...';
+      installHooks(process.cwd());
+    } catch {
+      // Hook installation is best-effort; don't block init
+      console.log(Colors.warning('\n  Hooks installation skipped (not a blocker)'));
+    }
+
+    // Check if project appears empty and offer scaffolding
+    try {
+      const db = openDb({ path: dbPath });
+      const registry = db.prepare('SELECT COUNT(*) as count FROM file_registry').get() as { count: number };
+      closeDb(db);
+
+      if (registry.count < 5) {
+        console.log(Colors.info('\nProject appears empty. Would you like to scaffold a production-grade project?'));
+        const { scaffold } = await inquirer.prompt([{
+          type: 'confirm',
+          name: 'scaffold',
+          message: 'Generate project structure?',
+          default: true,
+        }]);
+
+        if (scaffold) {
+          const answers = await inquirer.prompt([
+            {
+              type: 'list',
+              name: 'projectType',
+              message: 'Project type:',
+              choices: [
+                { name: 'Web Application', value: 'web-app' },
+                { name: 'API Service', value: 'api' },
+                { name: 'TypeScript Library', value: 'library' },
+                { name: 'CLI Tool', value: 'cli-tool' },
+              ],
+            },
+            {
+              type: 'list',
+              name: 'framework',
+              message: 'Framework:',
+              choices: [
+                { name: 'Express', value: 'express' },
+                { name: 'Fastify', value: 'fastify' },
+                { name: 'Hono', value: 'hono' },
+                { name: 'None (plain TypeScript)', value: 'none' },
+              ],
+              when: (a: any) => a.projectType === 'api' || a.projectType === 'web-app',
+            },
+            {
+              type: 'list',
+              name: 'testing',
+              message: 'Testing framework:',
+              choices: [
+                { name: 'Vitest', value: 'vitest' },
+                { name: 'Jest', value: 'jest' },
+                { name: 'None', value: 'none' },
+              ],
+            },
+            {
+              type: 'list',
+              name: 'packageManager',
+              message: 'Package manager:',
+              choices: [
+                { name: 'npm', value: 'npm' },
+                { name: 'pnpm', value: 'pnpm' },
+                { name: 'yarn', value: 'yarn' },
+              ],
+            },
+            {
+              type: 'confirm',
+              name: 'gitInit',
+              message: 'Init git repository?',
+              default: true,
+            },
+            {
+              type: 'confirm',
+              name: 'addCI',
+              message: 'Add GitHub Actions CI?',
+              default: true,
+            },
+            {
+              type: 'confirm',
+              name: 'addESLint',
+              message: 'Add ESLint?',
+              default: true,
+            },
+            {
+              type: 'confirm',
+              name: 'addPrettier',
+              message: 'Add Prettier?',
+              default: true,
+            },
+          ]);
+
+          const result = generateScaffold(process.cwd(), answers);
+          console.log(Colors.success('\nScaffolded ' + result.filesCreated.length + ' files!'));
+          console.log(Colors.info('\nNext steps:'));
+          result.nextSteps.forEach(s => console.log(Colors.muted('  • ' + s)));
+
+          // Re-run scan so the new files are indexed
+          spinner.text = 'Re-scanning after scaffold...';
+          await scanCommand({ full: true });
+        }
+      }
+    } catch {
+      // Scaffolding is best-effort; don't block init
     }
 
     spinner.succeed(`PM Agent initialized for "${projectName}"`);

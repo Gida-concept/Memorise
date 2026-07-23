@@ -106,7 +106,7 @@ fi
 
 ## Configuration
 
-PM Agent reads configuration from `~/.config/pm-agent/config.toml`. Environment variables override config values:
+PM Agent stores configuration in `.pm-agent/config.toml` at your project root. Environment variables override config values:
 
 - `PM_AGENT_CONFIG` — override config file path
 - `PM_AGENT_HOME` — override data directory
