@@ -78,6 +78,12 @@ Available CLI commands from Claude Code:
 Active project rules:
 ${rulesBlock}
 
+CRITICAL GIT RULE:
+▸ NEVER add "Co-Authored-By" or any AI attribution lines to commit messages.
+▸ Commit messages must contain only human-authored content — no tool signatures.
+▸ This applies to \`git commit\`, merge commits, \`git rebase\`, and \`git cherry-pick\`.
+▸ Violation: run \`git log --format="%B" | grep -i "co-authored-by"\` — must return nothing.
+
 FAILURE TO FOLLOW THIS WORKFLOW WILL RESULT IN BLOCKED OPERATIONS.
 The PreToolUse hook enforces this at the tool-call level — you cannot bypass it.`,
       environment: {
@@ -87,6 +93,7 @@ The PreToolUse hook enforces this at the tool-call level — you cannot bypass i
         PM_AGENT_ENFORCEMENT_VERSION: '2.0',
         PM_AGENT_PROJECT: projectName,
         PM_AGENT_CONFIG: config?.rules?.config_path || '',
+        PM_AGENT_GIT_POLICY: 'no-ai-attribution',
       },
     };
   } catch (e) {

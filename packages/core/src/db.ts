@@ -173,7 +173,8 @@ function parseWhereClause(
   }
 
   return (row: Record<string, unknown>) => {
-    return conditions.every((cond) => evaluateCondition(cond, row, params));
+    const localParams = [...params];
+    return conditions.every((cond) => evaluateCondition(cond, row, localParams));
   };
 }
 
