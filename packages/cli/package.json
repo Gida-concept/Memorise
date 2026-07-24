@@ -1,6 +1,6 @@
 {
   "name": "@gida-concept/pm-agent-cli",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "description": "PM Agent CLI — terminal interface for project memory and rules",
   "files": [
     "dist",

@@ -8,5 +8,4 @@ export default defineConfig({
   sourcemap: true,
   platform: 'node',
   target: 'node18',
-  external: ['sql.js'],
 });

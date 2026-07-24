@@ -1,9 +1,7 @@
-import initSqlJs, { Database as SqlJsDatabase } from 'sql.js';
-import type { SqlJsStatic } from 'sql.js';
+import { Low } from 'lowdb';
+import { JSONFile } from 'lowdb/node';
 import path from 'path';
 import fs from 'fs';
-import { createRequire } from 'module';
-import { pathToFileURL } from 'url';
 
 // ---- Config ----
 
@@ -20,74 +18,641 @@ export interface RunResult {
   lastInsertRowid: number;
 }
 
+// ---- Data shape for the JSON store ----
+
+interface DbData {
+  _migrations: { id: number; name: string; applied_at: string }[];
+  decisions: Record<string, unknown>[];
+  blockers: Record<string, unknown>[];
+  notes: Record<string, unknown>[];
+  tasks: Record<string, unknown>[];
+  scope_snapshots: Record<string, unknown>[];
+  file_registry: Record<string, unknown>[];
+  dependency_edges: Record<string, unknown>[];
+  architecture_map: Record<string, unknown>[];
+  doc_index: Record<string, unknown>[];
+  doc_fts: Record<string, unknown>[];
+  file_summaries: Record<string, unknown>[];
+}
+
+function createEmptyData(): DbData {
+  return {
+    _migrations: [],
+    decisions: [],
+    blockers: [],
+    notes: [],
+    tasks: [],
+    scope_snapshots: [],
+    file_registry: [],
+    dependency_edges: [],
+    architecture_map: [],
+    doc_index: [],
+    doc_fts: [],
+    file_summaries: [],
+  };
+}
+
+// ---- Mini SQL parser / JSON query engine ----
+// Maps the subset of SQL patterns used across the codebase to JS array operations.
+
+// Auto-increment counter for scope_snapshots
+let _autoIncrementCounter = 0;
+
+function resetAutoIncrement(data: DbData): void {
+  let max = 0;
+  for (const row of data.scope_snapshots) {
+    const id = Number((row as any).id ?? 0);
+    if (id > max) max = id;
+  }
+  _autoIncrementCounter = max;
+}
+
+function nextAutoIncrementId(): number {
+  _autoIncrementCounter++;
+  return _autoIncrementCounter;
+}
+
+/**
+ * Parse a simple SQL statement and execute it against the JSON data store.
+ * Returns the same shape as sql.js would: for exec() nothing, for prepared statements
+ * the appropriate row(s) or RunResult.
+ */
+function executeSql(
+  data: DbData,
+  sql: string,
+  params: unknown[],
+  mode: 'exec' | 'run' | 'get' | 'all',
+): any {
+  const trimmed = sql.trim();
+
+  // ---- DDL / no-ops ----
+  if (
+    /^CREATE\s/i.test(trimmed) ||
+    /^DROP\s/i.test(trimmed) ||
+    /^BEGIN\b/i.test(trimmed) ||
+    /^COMMIT\b/i.test(trimmed) ||
+    /^ROLLBACK\b/i.test(trimmed) ||
+    /^PRAGMA\b/i.test(trimmed)
+  ) {
+    if (mode === 'run') return { changes: 0, lastInsertRowid: 0 };
+    return;
+  }
+
+  // ---- last_insert_rowid() ----
+  if (/^SELECT\s+last_insert_rowid\s*\(/i.test(trimmed)) {
+    return [{ id: _autoIncrementCounter }];
+  }
+
+  // ---- INSERT OR REPLACE INTO <table> ... ----
+  const replaceMatch = trimmed.match(
+    /^INSERT\s+OR\s+REPLACE\s+INTO\s+(\w+)\s*\(([^)]+)\)\s*VALUES\s*\(([^)]+)\)/i,
+  );
+  if (replaceMatch) {
+    return handleInsert(data, replaceMatch, params, mode, true);
+  }
+
+  // ---- INSERT INTO <table> ... ----
+  const insertMatch = trimmed.match(
+    /^INSERT\s+INTO\s+(\w+)\s*\(([^)]+)\)\s*VALUES\s*\(([^)]+)\)/i,
+  );
+  if (insertMatch) {
+    return handleInsert(data, insertMatch, params, mode, false);
+  }
+
+  // ---- INSERT INTO <table> SELECT ... FROM <table2> ... ----
+  const insertSelectMatch = trimmed.match(
+    /^INSERT\s+INTO\s+(\w+)\s*(?:\(([^)]*)\))?\s*SELECT\s+(.+?)\s+FROM\s+(\w+)(.*)/i,
+  );
+  if (insertSelectMatch) {
+    return handleInsertSelect(data, insertSelectMatch, params, mode);
+  }
+
+  // ---- SELECT ... ----
+  const selectMatch = trimmed.match(
+    /^SELECT\s+(.+?)\s+FROM\s+(\w+)(?:\s+WHERE\s+(.+?))?(?:\s+ORDER\s+BY\s+(.+?))?(?:\s+LIMIT\s+(.+?))?\s*$/i,
+  );
+  if (selectMatch) {
+    return handleSelect(data, selectMatch, params, mode);
+  }
+
+  // ---- UPDATE <table> SET ... WHERE ... ----
+  const updateMatch = trimmed.match(
+    /^UPDATE\s+(\w+)\s+SET\s+(.+?)(?:\s+WHERE\s+(.+?))?\s*$/i,
+  );
+  if (updateMatch) {
+    return handleUpdate(data, updateMatch, params, mode);
+  }
+
+  // ---- DELETE FROM <table> WHERE ... ----
+  const deleteMatch = trimmed.match(
+    /^DELETE\s+FROM\s+(\w+)(?:\s+WHERE\s+(.+?))?\s*$/i,
+  );
+  if (deleteMatch) {
+    return handleDelete(data, deleteMatch, params, mode);
+  }
+
+  // ---- Unknown SQL ----
+  if (mode === 'run') return { changes: 0, lastInsertRowid: 0 };
+  return;
+}
+
+// ---- Parse helpers ----
+
+function parseWhereClause(
+  whereSql: string,
+  params: unknown[],
+): (row: Record<string, unknown>) => boolean {
+  const conditions = splitConditions(whereSql);
+
+  if (conditions.length === 0) {
+    return () => true;
+  }
+
+  return (row: Record<string, unknown>) => {
+    return conditions.every((cond) => evaluateCondition(cond, row, params));
+  };
+}
+
+function splitConditions(whereSql: string): string[] {
+  const conditions: string[] = [];
+  let depth = 0;
+  let current = '';
+  for (let i = 0; i < whereSql.length; i++) {
+    const c = whereSql[i];
+    if (c === '(') depth++;
+    else if (c === ')') depth--;
+    else if (c === 'A' && depth === 0) {
+      if (whereSql.slice(i, i + 5) === ' AND ') {
+        conditions.push(current.trim());
+        current = '';
+        i += 4;
+        continue;
+      }
+    }
+    current += c;
+  }
+  if (current.trim()) conditions.push(current.trim());
+  return conditions;
+}
+
+function evaluateCondition(
+  cond: string,
+  row: Record<string, unknown>,
+  params: unknown[],
+): boolean {
+  // col = ?
+  const eqMatch = cond.match(/^(\w+)\s*=\s*\?$/);
+  if (eqMatch) {
+    const val = params.shift();
+    const rowVal = row[eqMatch[1]!];
+    if (typeof val === 'string' && typeof rowVal === 'string') {
+      return rowVal === val;
+    }
+    return rowVal === val;
+  }
+
+  // col LIKE ?
+  const likeMatch = cond.match(/^(\w+)\s+LIKE\s+\?$/);
+  if (likeMatch) {
+    const pattern = String(params.shift() ?? '');
+    const colName = likeMatch[1]!;
+    const rowVal = String(row[colName] ?? '');
+
+    // Convert SQL LIKE pattern to JS match
+    if (pattern.startsWith('%') && pattern.endsWith('%')) {
+      const inner = pattern.slice(1, -1);
+      return rowVal.includes(inner);
+    }
+    if (pattern.startsWith('%')) {
+      return rowVal.endsWith(pattern.slice(1));
+    }
+    if (pattern.endsWith('%')) {
+      return rowVal.startsWith(pattern.slice(0, -1));
+    }
+    return rowVal === pattern;
+  }
+
+  // col IN (?, ?, ?)
+  const inMatch = cond.match(/^(\w+)\s+IN\s+\(([^)]+)\)$/i);
+  if (inMatch) {
+    const colName = inMatch[1]!;
+    const placeholders = inMatch[2]!.split(',').map((p) => p.trim());
+    const values = placeholders.map(() => params.shift());
+    return values.includes(row[colName]);
+  }
+
+  // col != ? / col <> ?
+  const neqMatch = cond.match(/^(\w+)\s*(?:!=|<>)\s*\??$/);
+  if (neqMatch) {
+    const val = params.shift();
+    return row[neqMatch[1]!] !== val;
+  }
+
+  // col > ? / col < ? / col >= ? / col <= ?
+  const cmpMatch = cond.match(/^(\w+)\s*(>=|<=|>|<)\s*\??$/);
+  if (cmpMatch) {
+    const val = params.shift();
+    const rowVal = row[cmpMatch[1]!];
+    if (val == null || rowVal == null) return false;
+    switch (cmpMatch[2]) {
+      case '>': return Number(rowVal) > Number(val);
+      case '<': return Number(rowVal) < Number(val);
+      case '>=': return Number(rowVal) >= Number(val);
+      case '<=': return Number(rowVal) <= Number(val);
+    }
+  }
+
+  // status = 'open' (literal quoted value, no ?)
+  const quotedEqMatch = cond.match(/^(\w+)\s*=\s*'([^']+)'$/);
+  if (quotedEqMatch) {
+    const rowVal = String(row[quotedEqMatch[1]!] ?? '');
+    return rowVal === quotedEqMatch[2]!;
+  }
+
+  // status IN ('open', 'resolved') (literal quoted values)
+  const quotedInMatch = cond.match(/^(\w+)\s+IN\s+\(([^)]+)\)$/i);
+  if (quotedInMatch) {
+    const colName = quotedInMatch[1]!;
+    const values = quotedInMatch[2]!.split(',').map(
+      (p) => p.trim().replace(/^'|'$/g, ''),
+    );
+    return values.includes(String(row[colName] ?? ''));
+  }
+
+  // 1=1 always-true pattern
+  if (/^\s*1\s*=\s*1\s*$/.test(cond)) {
+    return true;
+  }
+
+  // Fallback: assume true
+  return true;
+}
+
+function parseColumns(colSql: string): string[] {
+  return colSql
+    .split(',')
+    .map((c) => c.trim())
+    .filter(Boolean);
+}
+
+function parseOrderBy(orderBySql: string): {
+  column: string;
+  direction: 'asc' | 'desc';
+}[] {
+  const orderStr = orderBySql.trim();
+  const orders: { column: string; direction: 'asc' | 'desc' }[] = [];
+
+  const parts = orderStr.split(',').map((p) => p.trim());
+  for (const part of parts) {
+    const match = part.match(/^(\w+)\s+(DESC|ASC)\s*$/i);
+    if (match) {
+      orders.push({
+        column: match[1]!,
+        direction: match[2]!.toLowerCase() as 'asc' | 'desc',
+      });
+    } else {
+      orders.push({ column: part, direction: 'asc' });
+    }
+  }
+
+  return orders;
+}
+
+function projectRow(
+  row: Record<string, unknown>,
+  selectCols: string,
+): Record<string, unknown> {
+  const cols = selectCols.trim();
+  if (cols === '*') return row;
+
+  const colList = parseColumns(cols);
+  const result: Record<string, unknown> = {};
+  for (const col of colList) {
+    const asMatch = col.match(/^(\w+)\s+as\s+(\w+)$/i);
+    if (asMatch) {
+      result[asMatch[2]!] = row[asMatch[1]!];
+    } else {
+      result[col] = row[col];
+    }
+  }
+  return result;
+}
+
+// ---- SQL operation handlers ----
+
+function handleInsert(
+  data: DbData,
+  match: RegExpMatchArray,
+  params: unknown[],
+  mode: string,
+  replace: boolean,
+): any {
+  const tableName = match[1]!;
+  const cols = parseColumns(match[2]!);
+  const values = [...params];
+
+  const table = data[tableName as keyof DbData] as unknown as Record<string, unknown>[];
+
+  // Build the row
+  const row: Record<string, unknown> = {};
+  for (let i = 0; i < cols.length && i < values.length; i++) {
+    let val = values[i];
+    if (typeof val === 'string') {
+      try {
+        const parsed = JSON.parse(val);
+        if (Array.isArray(parsed) || (typeof parsed === 'object' && parsed !== null)) {
+          val = parsed;
+        }
+      } catch {
+        // Not JSON, keep as string
+      }
+    }
+    row[cols[i]!] = val;
+  }
+
+  // Handle auto-increment for scope_snapshots
+  if (tableName === 'scope_snapshots') {
+    row.id = nextAutoIncrementId();
+  }
+
+  if (replace) {
+    const pkCol = cols[0]!;
+    const existingIndex = table.findIndex((r) => r[pkCol] === row[pkCol]);
+    if (existingIndex >= 0) {
+      table[existingIndex] = row;
+      if (mode === 'run') return { changes: 1, lastInsertRowid: 0 };
+      return;
+    }
+  }
+
+  table.push(row);
+
+  if (mode === 'run') {
+    const lastId = tableName === 'scope_snapshots' ? Number(row.id) : 0;
+    return { changes: 1, lastInsertRowid: lastId };
+  }
+}
+
+function handleInsertSelect(
+  data: DbData,
+  match: RegExpMatchArray,
+  params: unknown[],
+  mode: string,
+): any {
+  const targetTable = match[1]!;
+  const sourceTable = match[4]!;
+  const rest = match[5]?.trim() ?? '';
+
+  const source = data[sourceTable as keyof DbData] as unknown as Record<string, unknown>[];
+  const target = data[targetTable as keyof DbData] as unknown as Record<string, unknown>[];
+
+  let rows: Record<string, unknown>[] = source;
+  if (rest) {
+    const whereMatch = rest.match(/^WHERE\s+(.+)/i);
+    if (whereMatch) {
+      const whereParams = [...params];
+      const filter = parseWhereClause(whereMatch[1]!, whereParams);
+      rows = source.filter(filter);
+    }
+  }
+
+  // Copy all rows to target
+  for (const srcRow of rows) {
+    const newRow: Record<string, unknown> = { ...srcRow };
+    target.push(newRow);
+  }
+
+  if (mode === 'run') return { changes: rows.length, lastInsertRowid: 0 };
+  return rows;
+}
+
+function handleSelect(
+  data: DbData,
+  match: RegExpMatchArray,
+  params: unknown[],
+  mode: string,
+): any {
+  const selectCols = match[1]!.trim();
+  const tableName = match[2]!;
+  const whereSql = match[3];
+  const orderBySql = match[4];
+  const limitSql = match[5];
+
+  const table = data[tableName as keyof DbData] as unknown as Record<string, unknown>[];
+  if (!table) {
+    if (mode === 'get') return undefined;
+    return [];
+  }
+
+  // Filter
+  let rows = table;
+  if (whereSql) {
+    const filter = parseWhereClause(whereSql, params);
+    rows = table.filter(filter);
+  }
+
+  // ORDER BY
+  if (orderBySql) {
+    const orders = parseOrderBy(orderBySql);
+    rows = [...rows].sort((a, b) => {
+      for (const order of orders) {
+        const aVal = a[order.column];
+        const bVal = b[order.column];
+        let cmp = 0;
+        if (aVal == null && bVal == null) cmp = 0;
+        else if (aVal == null) cmp = -1;
+        else if (bVal == null) cmp = 1;
+        else if (typeof aVal === 'number' && typeof bVal === 'number') {
+          cmp = aVal - bVal;
+        } else if (typeof aVal === 'string' && typeof bVal === 'string') {
+          cmp = aVal.localeCompare(bVal);
+        } else {
+          cmp = String(aVal).localeCompare(String(bVal));
+        }
+        if (cmp !== 0) {
+          return order.direction === 'desc' ? -cmp : cmp;
+        }
+      }
+      return 0;
+    });
+  }
+
+  // LIMIT
+  if (limitSql) {
+    const limitVal = parseInt(limitSql.trim(), 10);
+    if (!isNaN(limitVal) && limitVal >= 0) {
+      rows = rows.slice(0, limitVal);
+    }
+  }
+
+  // Check for COUNT(*) aggregate
+  const isCount = /^COUNT\s*\(\s*\*\s*\)/i.test(selectCols);
+  if (isCount) {
+    const alias = selectCols.replace(/^COUNT\s*\(\s*\*\s*\)(?:\s+as\s+(\w+))?/i, '$1') || 'count';
+    const result: Record<string, unknown> = {};
+    result[alias] = rows.length;
+    if (mode === 'get') return result;
+    if (mode === 'all') return [result];
+    return result;
+  }
+
+  // Project columns if not *
+  if (selectCols !== '*' && !/^COUNT\s*\(/i.test(selectCols)) {
+    rows = rows.map((r) => projectRow(r, selectCols));
+  }
+
+  if (mode === 'get') return rows.length > 0 ? rows[0] : undefined;
+  return rows;
+}
+
+function handleUpdate(
+  data: DbData,
+  match: RegExpMatchArray,
+  params: unknown[],
+  mode: string,
+): any {
+  const tableName = match[1]!;
+  const setSql = match[2]!.trim();
+  const whereSql = match[3];
+
+  const table = data[tableName as keyof DbData] as unknown as Record<string, unknown>[];
+
+  // Parse SET clauses: col = ?, col = ?
+  const setClauses: { col: string }[] = [];
+  const setParts = setSql.split(',').map((p) => p.trim());
+  for (const part of setParts) {
+    const setMatch = part.match(/^(\w+)\s*=\s*\??$/);
+    if (setMatch) {
+      setClauses.push({ col: setMatch[1]! });
+    }
+  }
+
+  // The values for SET are the first N params, remaining are for WHERE
+  const setValues = params.slice(0, setClauses.length);
+  const whereParams = params.slice(setClauses.length);
+
+  // Filter rows to update
+  let targetRows = table;
+  if (whereSql) {
+    const filter = parseWhereClause(whereSql, whereParams);
+    targetRows = table.filter(filter);
+  }
+
+  let changes = 0;
+  for (const row of targetRows) {
+    changes++;
+    for (let i = 0; i < setClauses.length; i++) {
+      let val = setValues[i];
+      if (typeof val === 'string') {
+        try {
+          const parsed = JSON.parse(val);
+          if (Array.isArray(parsed) || (typeof parsed === 'object' && parsed !== null)) {
+            val = parsed;
+          }
+        } catch {
+          // Not JSON, keep as string
+        }
+      }
+      row[setClauses[i]!.col] = val;
+    }
+  }
+
+  if (mode === 'run') return { changes, lastInsertRowid: 0 };
+  return;
+}
+
+function handleDelete(
+  data: DbData,
+  match: RegExpMatchArray,
+  params: unknown[],
+  mode: string,
+): any {
+  const tableName = match[1]!;
+  const whereSql = match[2];
+
+  const table = data[tableName as keyof DbData] as unknown as Record<string, unknown>[];
+
+  if (!whereSql) {
+    // DELETE FROM table -- clear all
+    const count = table.length;
+    (data[tableName as keyof DbData] as unknown as Record<string, unknown>[]) = [];
+    if (mode === 'run') return { changes: count, lastInsertRowid: 0 };
+    return;
+  }
+
+  const filter = parseWhereClause(whereSql, params);
+  let i = table.length;
+  let changes = 0;
+  while (i--) {
+    if (filter(table[i]!)) {
+      table.splice(i, 1);
+      changes++;
+    }
+  }
+
+  if (mode === 'run') return { changes, lastInsertRowid: 0 };
+  return;
+}
+
 // ---- Statement wrapper ----
 // Mimics the better-sqlite3 Statement API so existing code works unchanged.
 
 export class Statement {
-  private db: SqlJsDatabase;
   private wrapper: DbWrapper;
   private sql: string;
 
-  constructor(db: SqlJsDatabase, wrapper: DbWrapper, sql: string) {
-    this.db = db;
+  constructor(wrapper: DbWrapper, sql: string) {
     this.wrapper = wrapper;
     this.sql = sql;
   }
 
   run(...params: unknown[]): RunResult {
     this.wrapper._scheduleSave();
-    const bindParams = params.length > 0 ? params : undefined;
-    this.db.run(this.sql, bindParams as any);
-    const changes = this.db.getRowsModified();
-    const isInsert = /^\s*INSERT\s/i.test(this.sql);
-    let lastInsertRowid = 0;
-    if (isInsert) {
-      try {
-        const result = this.db.exec('SELECT last_insert_rowid() as id');
-        if (result.length > 0 && result[0]!.values.length > 0) {
-          lastInsertRowid = Number(result[0]!.values[0]![0]);
-        }
-      } catch {
-        // last_insert_rowid not available
+    try {
+      const result = executeSql(this.wrapper.data, this.sql, [...params], 'run');
+      if (result && typeof result.changes === 'number') {
+        return result as RunResult;
       }
+      return { changes: 0, lastInsertRowid: 0 };
+    } catch (err) {
+      throw err;
     }
-    return { changes, lastInsertRowid };
   }
 
   get(...params: unknown[]): any | undefined {
-    const stmt = this.db.prepare(this.sql);
-    stmt.bind(params as any);
-    const row = stmt.step() ? stmt.getAsObject() : undefined;
-    stmt.free();
-    return row;
+    return executeSql(this.wrapper.data, this.sql, [...params], 'get');
   }
 
   all(...params: unknown[]): any[] {
-    const stmt = this.db.prepare(this.sql);
-    stmt.bind(params as any);
-    const rows: any[] = [];
-    while (stmt.step()) {
-      rows.push(stmt.getAsObject());
-    }
-    stmt.free();
-    return rows;
+    const result = executeSql(this.wrapper.data, this.sql, [...params], 'all');
+    return Array.isArray(result) ? result : [];
   }
 }
 
 // ---- Database wrapper ----
-// Wraps a sql.js Database and exposes a better-sqlite3-compatible API.
+// Wraps a lowdb instance and exposes a better-sqlite3-compatible API.
 
 export class DbWrapper {
-  private db: SqlJsDatabase;
+  private low: Low<DbData>;
   private filePath: string | null;
   private _saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private _inTransaction = false;
+  /** Snapshot of data for transaction rollback */
+  private _txSnapshot: string | null = null;
 
-  constructor(db: SqlJsDatabase, filePath: string | null = null) {
-    this.db = db;
+  constructor(low: Low<DbData>, filePath: string | null = null) {
+    this.low = low;
     this.filePath = filePath;
   }
 
+  /** Expose low.data for the mini query engine */
+  get data(): DbData {
+    return this.low.data;
+  }
+
   _scheduleSave(): void {
+    if (this._inTransaction) return; // Don't save mid-transaction
+
     if (this._saveDebounceTimer) {
       clearTimeout(this._saveDebounceTimer);
     }
@@ -98,43 +663,68 @@ export class DbWrapper {
   }
 
   exec(sql: string): void {
-    this.db.exec(sql);
+    if (/^CREATE\s/i.test(sql.trim()) || /^DROP\s/i.test(sql.trim()) || /^PRAGMA/i.test(sql.trim())) {
+      return; // DDL no-op
+    }
+    if (/^BEGIN\b/i.test(sql.trim())) {
+      this._inTransaction = true;
+      this._txSnapshot = JSON.stringify(this.low.data);
+      return;
+    }
+    if (/^COMMIT\b/i.test(sql.trim())) {
+      this._inTransaction = false;
+      this._txSnapshot = null;
+      this._scheduleSave();
+      return;
+    }
+    if (/^ROLLBACK\b/i.test(sql.trim())) {
+      this._inTransaction = false;
+      if (this._txSnapshot) {
+        this.low.data = JSON.parse(this._txSnapshot);
+        this._txSnapshot = null;
+      }
+      return;
+    }
+    // DELETE FROM table, INSERT INTO ... SELECT, etc.
+    executeSql(this.low.data, sql, [], 'exec');
   }
 
   prepare(sql: string): Statement {
-    return new Statement(this.db, this, sql);
+    return new Statement(this, sql);
   }
 
   close(): void {
-    if (this.filePath) {
-      try {
-        const data = this.db.export();
-        const buffer = Buffer.from(data);
-        fs.writeFileSync(this.filePath, buffer);
-      } catch {
-        // Best-effort save on close
-      }
+    if (this._saveDebounceTimer) {
+      clearTimeout(this._saveDebounceTimer);
+      this._saveDebounceTimer = null;
     }
-    this.db.close();
+    this.save();
   }
 
   save(): void {
-    if (this.filePath) {
-      const data = this.db.export();
-      const buffer = Buffer.from(data);
-      fs.writeFileSync(this.filePath, buffer);
+    if (this.filePath && this.low.data) {
+      try {
+        this.low.write();
+      } catch (err) {
+        // Best-effort save
+      }
     }
   }
 
+  /**
+   * Simple transaction support via snapshot/restore.
+   * Since lowdb is not transactional, we snapshot data before running
+   * the function and restore on error.
+   */
   transaction<T>(fn: () => T): () => T {
     return () => {
-      this.db.exec('BEGIN');
+      const snapshot = JSON.stringify(this.low.data);
       try {
         const result = fn();
-        this.db.exec('COMMIT');
         return result;
       } catch (err) {
-        this.db.exec('ROLLBACK');
+        // Restore data on error and re-throw
+        this.low.data = JSON.parse(snapshot);
         throw err;
       }
     };
@@ -144,263 +734,119 @@ export class DbWrapper {
 /** Type alias for backward compatibility. Use DbWrapper for new code. */
 export type Database = DbWrapper;
 
-// ---- Migrations ----
+// ---- Data presets for migrations ----
 
 interface Migration {
   name: string;
-  up: (db: DbWrapper) => void;
+  up: (data: DbData) => void;
 }
 
 const migrations: Migration[] = [
   {
     name: '001_initial_schema',
-    up: (db) => {
-      db.exec(`
-        CREATE TABLE IF NOT EXISTS _migrations (
-          id INTEGER PRIMARY KEY,
-          name TEXT NOT NULL,
-          applied_at TEXT DEFAULT (datetime('now'))
-        );
-
-        CREATE TABLE IF NOT EXISTS decisions (
-          id TEXT PRIMARY KEY,
-          title TEXT NOT NULL,
-          body TEXT NOT NULL DEFAULT '',
-          author TEXT,
-          made_at TEXT NOT NULL,
-          linked_entities TEXT DEFAULT '[]',
-          created_at TEXT DEFAULT (datetime('now'))
-        );
-        CREATE INDEX IF NOT EXISTS idx_decisions_made_at ON decisions(made_at);
-        CREATE INDEX IF NOT EXISTS idx_decisions_author ON decisions(author);
-
-        CREATE TABLE IF NOT EXISTS blockers (
-          id TEXT PRIMARY KEY,
-          title TEXT NOT NULL,
-          description TEXT DEFAULT '',
-          age_hours INTEGER DEFAULT 0,
-          blocked_by TEXT DEFAULT '',
-          status TEXT DEFAULT 'open' CHECK(status IN ('open', 'resolved')),
-          linked_entities TEXT DEFAULT '[]',
-          created_at TEXT DEFAULT (datetime('now'))
-        );
-        CREATE INDEX IF NOT EXISTS idx_blockers_status ON blockers(status);
-        CREATE INDEX IF NOT EXISTS idx_blockers_age ON blockers(age_hours);
-
-        CREATE TABLE IF NOT EXISTS notes (
-          id TEXT PRIMARY KEY,
-          content TEXT NOT NULL,
-          tags TEXT DEFAULT '[]',
-          linked_entities TEXT DEFAULT '[]',
-          created_at TEXT DEFAULT (datetime('now'))
-        );
-        CREATE INDEX IF NOT EXISTS idx_notes_tags ON notes(tags);
-
-        CREATE TABLE IF NOT EXISTS tasks (
-          id TEXT PRIMARY KEY,
-          title TEXT NOT NULL,
-          status TEXT DEFAULT 'todo' CHECK(status IN ('todo', 'in_progress', 'blocked', 'done')),
-          owner TEXT DEFAULT '',
-          linked_entities TEXT DEFAULT '[]',
-          created_at TEXT DEFAULT (datetime('now'))
-        );
-        CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
-        CREATE INDEX IF NOT EXISTS idx_tasks_owner ON tasks(owner);
-
-        CREATE TABLE IF NOT EXISTS scope_snapshots (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          sprint_name TEXT,
-          committed_days REAL DEFAULT 0,
-          remaining_days REAL DEFAULT 0,
-          risk TEXT DEFAULT 'LOW' CHECK(risk IN ('LOW', 'MEDIUM', 'HIGH')),
-          captured_at TEXT DEFAULT (datetime('now'))
-        );
-        CREATE INDEX IF NOT EXISTS idx_scope_sprint ON scope_snapshots(sprint_name);
-      `);
+    up: (data: DbData) => {
+      if (!Array.isArray(data._migrations)) data._migrations = [];
+      if (!Array.isArray(data.decisions)) data.decisions = [];
+      if (!Array.isArray(data.blockers)) data.blockers = [];
+      if (!Array.isArray(data.notes)) data.notes = [];
+      if (!Array.isArray(data.tasks)) data.tasks = [];
+      if (!Array.isArray(data.scope_snapshots)) data.scope_snapshots = [];
     },
   },
   {
     name: '002_codebase_intelligence',
-    up: (db) => {
-      db.exec(`
-        CREATE TABLE IF NOT EXISTS file_registry (
-          path TEXT PRIMARY KEY,
-          hash TEXT NOT NULL,
-          size INTEGER NOT NULL,
-          type TEXT NOT NULL CHECK(type IN ('source', 'test', 'doc', 'config', 'asset', 'unknown')),
-          last_indexed_at TEXT NOT NULL,
-          created_at TEXT DEFAULT (datetime('now'))
-        );
-        CREATE INDEX IF NOT EXISTS idx_file_type ON file_registry(type);
-
-        CREATE TABLE IF NOT EXISTS dependency_edges (
-          source_path TEXT NOT NULL,
-          target_path TEXT NOT NULL,
-          import_type TEXT DEFAULT 'static' CHECK(import_type IN ('static', 'dynamic', 'type_only')),
-          PRIMARY KEY (source_path, target_path)
-        );
-        CREATE INDEX IF NOT EXISTS idx_deps_target ON dependency_edges(target_path);
-
-        CREATE TABLE IF NOT EXISTS architecture_map (
-          path TEXT NOT NULL,
-          role TEXT NOT NULL CHECK(role IN ('entrypoint','middleware','model','route','controller','service','util','component','hook','test','config')),
-          framework TEXT,
-          metadata TEXT DEFAULT '{}',
-          created_at TEXT DEFAULT (datetime('now'))
-        );
-        CREATE INDEX IF NOT EXISTS idx_arch_role ON architecture_map(role);
-
-        CREATE TABLE IF NOT EXISTS doc_index (
-          path TEXT PRIMARY KEY,
-          title TEXT,
-          content TEXT NOT NULL,
-          tokens TEXT,
-          last_indexed_at TEXT NOT NULL,
-          created_at TEXT DEFAULT (datetime('now'))
-        );
-
-        -- Standalone FTS4 table (no external content — sql.js WASM doesn't support content=/content_rowid=)
-        CREATE VIRTUAL TABLE IF NOT EXISTS doc_fts USING fts4(path, title, content);
-      `);
+    up: (data: DbData) => {
+      if (!Array.isArray(data.file_registry)) data.file_registry = [];
+      if (!Array.isArray(data.dependency_edges)) data.dependency_edges = [];
+      if (!Array.isArray(data.architecture_map)) data.architecture_map = [];
+      if (!Array.isArray(data.doc_index)) data.doc_index = [];
+      if (!Array.isArray(data.doc_fts)) data.doc_fts = [];
     },
   },
   {
     name: '003_semantic_index',
-    up: (db) => {
-      db.exec(`
-        CREATE TABLE IF NOT EXISTS file_summaries (
-          path TEXT PRIMARY KEY,
-          summary TEXT,
-          purpose TEXT,
-          exports TEXT DEFAULT '[]',
-          imports TEXT DEFAULT '[]',
-          key_types TEXT DEFAULT '[]',
-          generated_at TEXT,
-          created_at TEXT DEFAULT (datetime('now'))
-        );
-      `);
+    up: (data: DbData) => {
+      if (!Array.isArray(data.file_summaries)) data.file_summaries = [];
     },
   },
   {
     name: '004_fix_fts4',
-    up: (db) => {
-      // Drop broken external-content FTS4 table + triggers, create standalone
-      db.exec(`
-        DROP TABLE IF EXISTS doc_fts;
-        DROP TRIGGER IF EXISTS doc_index_ai;
-        DROP TRIGGER IF EXISTS doc_index_ad;
-        DROP TRIGGER IF EXISTS doc_index_au;
-
-        CREATE VIRTUAL TABLE IF NOT EXISTS doc_fts USING fts4(path, title, content);
-
-        -- Re-index all existing documents into standalone FTS4
-        INSERT INTO doc_fts (path, title, content)
-        SELECT path, title, content FROM doc_index;
-      `);
+    up: (data: DbData) => {
+      if (!Array.isArray(data.doc_fts)) data.doc_fts = [];
+      if (data.doc_fts.length === 0 && data.doc_index.length > 0) {
+        data.doc_fts = data.doc_index.map((doc) => ({
+          path: (doc as any).path,
+          title: (doc as any).title,
+          content: (doc as any).content,
+        }));
+      }
     },
   },
 ];
 
 // ---- Open / Migrate / Close ----
 
-let sqlJsInitPromise: Promise<SqlJsStatic> | null = null;
-
-async function ensureSqlJs(): Promise<SqlJsStatic> {
-  if (!sqlJsInitPromise) {
-    sqlJsInitPromise = initSqlJs({
-      locateFile: (file: string) => {
-        try {
-          // When installed globally (npm install -g), sql.js's default WASM loader
-          // can't find sql-wasm.wasm on Windows, causing N(44) ENOENT crashes.
-          // Use Node.js module resolution to find the WASM binary at runtime.
-          //
-          // In CJS (tsup compiled output), __dirname is available directly.
-          // In native ESM, import.meta.url is available.
-          // 'typeof __dirname' is safe in both modes (returns 'undefined' when undeclared).
-          const baseUrl: string | URL =
-            typeof __dirname === 'string'
-              ? pathToFileURL(path.join(__dirname, '_resolve_helper.js'))
-              : import.meta.url;
-          const _require = createRequire(baseUrl);
-          return _require.resolve('sql.js/dist/' + file);
-        } catch {
-          // Fallback: let sql.js use its default loader
-          return file;
-        }
-      },
-    });
-  }
-  return sqlJsInitPromise;
-}
-
 export async function openDb(config: DbConfig): Promise<DbWrapper> {
-  if (!config.memory) {
+  let low: Low<DbData>;
+
+  if (config.memory) {
+    low = new Low(new MemoryAdapter(), createEmptyData());
+  } else {
     const dir = path.dirname(config.path);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
+
+    const adapter = new JSONFile<DbData>(config.path);
+    low = new Low(adapter, createEmptyData());
+
+    // Read existing data
+    await low.read();
+    if (!low.data || Object.keys(low.data).length === 0) {
+      low.data = createEmptyData();
+    }
   }
 
-  const SQL = await ensureSqlJs();
-  let db: SqlJsDatabase;
-
-  try {
-    if (config.memory) {
-      db = new SQL.Database();
-    } else if (fs.existsSync(config.path)) {
-      const buffer = fs.readFileSync(config.path);
-      db = new SQL.Database(buffer);
-    } else {
-      db = new SQL.Database();
+  // Initialize any missing tables
+  const defaultData = createEmptyData();
+  for (const key of Object.keys(defaultData) as (keyof DbData)[]) {
+    if (!Array.isArray((low.data as any)[key])) {
+      (low.data as any)[key] = [];
     }
-  } catch (err) {
-    const msg = String(err);
-    if (
-      msg.includes('cannot find module') ||
-      msg.includes('sql.js') ||
-      msg.includes('wasm') ||
-      msg.includes('WebAssembly')
-    ) {
-      throw new Error(
-        `Failed to initialize sql.js database.\n` +
-        `Fix: Make sure sql.js is installed:\n\n` +
-        `  npm install @gida-concept/pm-agent-core\n`
-      );
-    }
-    throw err;
   }
 
-  // Apply PRAGMAs — these may not all work in sql.js WASM build
-  try { db.run('PRAGMA journal_mode = MEMORY'); } catch { /* ok */ }
-  try { db.run('PRAGMA busy_timeout = 5000'); } catch { /* ok */ }
-  try { db.run('PRAGMA foreign_keys = ON'); } catch { /* ok */ }
+  const wrapper = new DbWrapper(low, config.memory ? null : config.path);
 
-  const wrapper = new DbWrapper(db, config.memory ? null : config.path);
+  // Reset auto-increment counter
+  resetAutoIncrement(low.data);
+
+  // Run migrations
   migrate(wrapper);
 
   return wrapper;
 }
 
 export function migrate(db: DbWrapper): void {
-  db.exec(`CREATE TABLE IF NOT EXISTS _migrations (
-    id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL,
-    applied_at TEXT DEFAULT (datetime('now'))
-  )`);
+  const data = db.data;
 
-  const applied = new Set(
-    (db.prepare('SELECT name FROM _migrations').all() as { name: string }[]).map((r) => r.name),
-  );
+  if (!Array.isArray(data._migrations)) {
+    data._migrations = [];
+  }
+
+  const applied = new Set(data._migrations.map((m) => m.name));
 
   for (const migration of migrations) {
     if (!applied.has(migration.name)) {
-      db.exec('BEGIN');
+      const snapshot = JSON.stringify(data);
       try {
-        migration.up(db);
-        db.prepare('INSERT INTO _migrations (name) VALUES (?)').run(migration.name);
-        db.exec('COMMIT');
+        migration.up(data);
+        data._migrations.push({
+          id: data._migrations.length + 1,
+          name: migration.name,
+          applied_at: new Date().toISOString(),
+        });
       } catch (err) {
-        db.exec('ROLLBACK');
+        Object.assign(data, JSON.parse(snapshot));
         throw err;
       }
     }
@@ -426,14 +872,11 @@ export function generateId(db: DbWrapper, prefix: IdPrefix): string {
   }
 
   const table = tableMap[prefix];
+  const rows = db.prepare(`SELECT id FROM ${table} WHERE id LIKE ? ORDER BY id DESC LIMIT 1`).get(`${prefix}-%`) as { id: string } | undefined;
+
   let lastId = 0;
-
-  const row = db
-    .prepare(`SELECT id FROM ${table} WHERE id LIKE ? ORDER BY id DESC LIMIT 1`)
-    .get(`${prefix}-%`) as { id: string } | undefined;
-
-  if (row) {
-    const numericPart = parseInt(row.id.split('-')[1]!, 10);
+  if (rows) {
+    const numericPart = parseInt((rows as any).id.split('-')[1]!, 10);
     if (!isNaN(numericPart)) {
       lastId = numericPart;
     }
@@ -441,4 +884,16 @@ export function generateId(db: DbWrapper, prefix: IdPrefix): string {
 
   const nextId = lastId + 1;
   return `${prefix}-${String(nextId).padStart(3, '0')}`;
+}
+
+// ---- In-memory adapter for memory mode ----
+
+class MemoryAdapter {
+  data: DbData = createEmptyData();
+  async read(): Promise<DbData | null> {
+    return this.data;
+  }
+  async write(data: DbData): Promise<void> {
+    this.data = data;
+  }
 }
