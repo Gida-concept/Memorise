@@ -60,7 +60,7 @@ function resolveConfig(): Config | null {
       return parseTomlFile(localConfigPath);
     }
 
-    // Fallback to global ~/.config/pm-agent/
+    // Fallback to global config (user-created ~/.config/pm-agent/)
     const home = process.env.HOME || process.env.USERPROFILE || '~';
     const configDir = path.resolve(home.replace(/^~/, home), '.config', 'pm-agent');
 

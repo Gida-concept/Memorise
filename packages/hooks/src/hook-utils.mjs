@@ -27,7 +27,7 @@ import { createRequire } from 'node:module';
  * Lookup order:
  * 1. PM_AGENT_CONFIG environment variable (explicit override)
  * 2. project/.pm-agent/config.toml (project-local — this is the default)
- * 3. ~/.config/pm-agent/config.toml (global fallback)
+ * 3. ~/.config/pm-agent/config.toml (global fallback — only if user created it)
  *
  * @returns {object|null} Parsed config object, or null if not found
  */
@@ -48,7 +48,7 @@ export function resolveConfig() {
       return parseTomlFile(localConfigPath);
     }
 
-    // 3. Fallback to global ~/.config/pm-agent/config.toml
+    // 3. Fallback to global ~/.config/pm-agent/config.toml (user-created only)
     const home = process.env.HOME || process.env.USERPROFILE || '~';
     const globalConfigPath = path.resolve(home.replace(/^~/, home), '.config', 'pm-agent', 'config.toml');
     if (fs.existsSync(globalConfigPath)) {

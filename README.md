@@ -109,7 +109,7 @@ Everything is **automatically captured** from your existing tools. No manual ent
 Configurable guardrails that **enforce** PM discipline:
 
 ```toml
-# ~/.config/pm-agent/rules.toml
+# .pm-agent/rules.toml
 [[rule]]
 name = "decision-before-close"
 trigger = "ticket.status == 'closed'"
@@ -167,22 +167,35 @@ Your AI asks. PM Agent answers. No hallucination, no stale context.
 
 ### Installation
 
-**Via npm (recommended after publish):**
+**Option A — Run via npx (no install, works anywhere):**
+
+Use this if you don't want `pm` on your system PATH. Every command starts with `npx`:
 
 ```bash
-# Install the CLI globally
-npm install -g @gida-concept/pm-agent-cli
+cd your-project
+npx @gida-concept/pm-agent-cli init
+npx @gida-concept/pm-agent-cli scan
+npx @gida-concept/pm-agent-cli status
+```
 
-# Then `pm` is available anywhere
+Make an alias in your shell profile to save keystrokes:
+```powershell
+# PowerShell (edit with: notepad $PROFILE)
+function pm { npx @gida-concept/pm-agent-cli $args }
+```
+```bash
+# ~/.bashrc
+alias pm='npx @gida-concept/pm-agent-cli'
+```
+
+**Option B — Global install (optional, makes `pm` directly available):**
+
+```bash
+npm install -g @gida-concept/pm-agent-cli
 pm --help
 ```
 
-**Via npx (no install):**
-
-```bash
-# Run directly without installing
-npx @gida-concept/pm-agent-cli init
-```
+> **Windows PowerShell users:** Without a global install, `pm` is not on PATH. Use Option A (`npx @gida-concept/pm-agent-cli <command>`) or install globally with Option B.
 
 **From source (development):**
 
@@ -192,19 +205,22 @@ cd Memorise
 npm install
 npm run build
 npm link
-
-# Now `pm` is available anywhere
 pm --help
 ```
 
 ### Initialize in Your Project
 
+Config stays **project-local** — `pm init` generates `.pm-agent/` in your project root.
+The shipped package uses empty placeholder values; your real paths are filled in locally.
+Do not edit a global `~/.config/pm-agent/config.toml` — that global path is unused unless you create it manually.
+
 ```bash
-$ cd ~/projects/my-app
+$ cd your-project
 $ pm init
-→ Created: /home/you/.config/pm-agent/config.toml
-→ Created: /home/you/.config/pm-agent/rules.toml
-→ Project graph ready in SQLite
+→ Created: your-project/.pm-agent/config.toml
+→ Created: your-project/.pm-agent/rules.toml
+→ Created: your-project/.pm-agent/pm-agent.db
+→ Created: your-project/.mcp.json (MCP server config)
 ```
 
 ### Daily Usage
@@ -652,7 +668,7 @@ Rules are the heart of PM Agent. They make discipline **automatic**, not optiona
 
 ### How It Works: One File, Two Concerns
 
-All rules live in a single file (`~/.config/pm-agent/rules.toml`). A `scope` field tells PM Agent which context a rule applies in:
+All rules live in a single file (`.pm-agent/rules.toml`). A `scope` field tells PM Agent which context a rule applies in:
 
 | `scope` | Applied when                                   | Example                                   |
 | ------- | ---------------------------------------------- | ----------------------------------------- |
@@ -669,7 +685,7 @@ Same engine, same parser, same evaluator — one source of truth for everything.
 #### 1. Write TOML directly
 
 ```toml
-# ~/.config/pm-agent/rules.toml
+# .pm-agent/rules.toml
 
 # ── PM discipline (checked by CLI + MCP) ──
 
