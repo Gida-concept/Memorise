@@ -171,9 +171,12 @@ export async function initCommand(opts: Record<string, any>): Promise<void> {
     spinner.text = 'Installing PM Agent hooks...';
     try {
       installHooks(process.cwd());
-    } catch {
-      console.log(Colors.warning('\n  PM Agent hooks package not found. Hooks will not be installed.'));
-      console.log(Colors.muted('  Install it manually: npm install @gida-concept/pm-agent-hooks'));
+      spinner.succeed('PM Agent hooks installed');
+    } catch (err) {
+      spinner.fail('Could not install PM Agent hooks');
+      const message = (err as Error).message || String(err);
+      console.log(Colors.warning(`  ${message}`));
+      console.log(Colors.muted('  Install manually: npm install @gida-concept/pm-agent-hooks'));
     }
 
     // Check if project appears empty and offer scaffolding

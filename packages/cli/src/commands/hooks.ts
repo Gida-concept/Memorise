@@ -63,7 +63,8 @@ function resolveHooksSrcPath(): string | null {
     const pkgJsonPath = require.resolve('@gida-concept/pm-agent-hooks/package.json');
     const pkgDir = path.dirname(pkgJsonPath);
     const srcDir = path.join(pkgDir, 'src');
-    if (fs.existsSync(path.join(srcDir, 'hook-utils.mjs'))) {
+    const utilsPath = path.join(srcDir, 'hook-utils.mjs');
+    if (fs.existsSync(utilsPath)) {
       return srcDir;
     }
   } catch {
