@@ -25,9 +25,9 @@ npx -y @gida-concept/pm-agent-cli init
 
 This works anywhere with Node.js — `sql.js` runs in pure JavaScript via WebAssembly, no native compilation needed.
 
-### From inside a coding CLI (Claude Code, Cursor, etc.)
+### From inside Claude Code
 
-The coding CLI's sandbox may not compile native modules correctly. Install locally first:
+Claude Code's sandbox may not compile native modules correctly. Install locally first:
 
 ```bash
 ! npm install -D @gidea-concept/pm-agent-cli

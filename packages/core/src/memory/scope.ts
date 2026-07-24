@@ -18,14 +18,6 @@ export function captureScope(
   const ratio = committed > 0 ? ((committed - remaining) / committed) * 100 : 0;
   const risk = data.risk ?? (ratio <= 25 ? 'LOW' : ratio <= 50 ? 'MEDIUM' : 'HIGH');
 
-  // Safety warning — detect stale callers passing same value for both
-  if (committed > 0 && committed === remaining) {
-    console.warn(
-      `[pm-agent] Warning: committed_days (${committed}) equals remaining_days (${remaining}) — ` +
-      `risk is 0% (LOW). Did you mean to pass a different value for --remaining / remaining_days?`
-    );
-  }
-
   const result = db.prepare(`
     INSERT INTO scope_snapshots (sprint_name, committed_days, remaining_days, risk)
     VALUES (?, ?, ?, ?)

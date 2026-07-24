@@ -72,7 +72,7 @@ export async function scan(
     db.transaction(() => {
       for (const entry of batch) {
         insertFile.run(entry.path, entry.hash, entry.size, entry.type, entry.last_indexed_at);
-        // Index doc files in FTS5
+        // Index doc files in FTS4 (sql.js WASM doesn't support FTS5)
         if (entry.type === 'doc') {
           indexDocFile(db, root, entry.path);
         }
@@ -135,7 +135,7 @@ export async function scan(
 }
 
 /**
- * Index a doc file for FTS5 search.
+ * Index a doc file for FTS4 search.
  */
 function indexDocFile(db: DbWrapper, root: string, relativePath: string): void {
   try {

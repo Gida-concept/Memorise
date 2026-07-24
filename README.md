@@ -65,7 +65,7 @@ PM Agent fills that gap. It's not an AI. It's the **nervous system** your AI tal
 | **Memory, not intelligence** | We remember. Your AI (Claude, GPT, local LLM) thinks. We just make sure it has the right context                               |
 | **Rules, not suggestions**   | Enforceable guardrails: log decisions before closing tickets, check scope before adding work, surface blockers before standup  |
 | **Ambient, not app**         | You don't open PM Agent. It's already there when you type                                                                      |
-| **Bring your own AI**        | Works with Claude Code, OpenCode, Codex CLI, Cursor, or any AI coding tool. Uses your keys, your model, your config |
+| **Bring your own AI**        | Works with Claude Code. Uses your keys, your model, your config |
 | **Local-first**              | Your project state lives in SQLite on your machine. No cloud required. Team sync is opt-in, encrypted                          |
 
 ---
@@ -275,16 +275,16 @@ $ pm scan --watch
 
 PM Agent is **not** an AI. It uses **your** AI via **Claude Code hooks** — the pre-tool-use and session-start hooks automatically load your project context into every AI interaction.
 
-When you configure PM Agent hooks (via `pm init` or `pm hooks setup`), your AI assistant automatically:
+When you configure PM Agent hooks (via `pm init` or `pm hooks setup`), Claude Code automatically:
 - Queries project state (blockers, decisions, tasks) inline while you code
 - Logs decisions and enforces rules before you commit
 - Surfaces blockers, sprint risks, and pending decisions in your workflow
 
 > **No external API keys or environment variables needed.** Everything runs locally from your project's `.pm-agent/` directory.
 
-### Usage from AI Coding Tools
+### Usage from Claude Code
 
-After running `pm init`, use the CLI with `! pm <command>` from any coding tool:
+After running `pm init`, use the CLI with `! pm <command>` from Claude Code:
 
 ```
 ! pm status        — Project overview
@@ -319,7 +319,7 @@ PM Agent ships with **Claude Code hooks** that are auto-installed by `pm init` (
 
 ### Hooks for Other Clients
 
-For AI coding tools that don't support hooks natively, create or update a `CLAUDE.md` (or `AGENTS.md`, `CURSOR_RULES`, etc.) in your project root:
+For Claude Code, add a `CLAUDE.md` in your project root:
 
 ```markdown
 ## Required PM Agent Behavior
@@ -687,7 +687,7 @@ Everything is **automatically linked**. Ask "what's related to AUTH-91?" and get
 - [ ] Slack integration (decision detection, blocker alerts)
 - [ ] Notion integration (doc linking)
 - [ ] VS Code extension (sidebar + inline)
-- [ ] Cursor extension
+
 - [ ] Raycast extension (quick capture)
 - [ ] macOS menubar (blocker indicator)
 - [ ] Team sync (encrypted, opt-in)

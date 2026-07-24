@@ -194,7 +194,7 @@ export class GitHubIntegration implements Integration {
       const options: https.RequestOptions = {
         headers: {
           Accept: 'application/vnd.github.v3+json',
-          'User-Agent': 'pm-agent/0.1.0',
+          'User-Agent': 'pm-agent/0.3.1',
           ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
         },
         timeout: 15000,

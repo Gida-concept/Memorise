@@ -48,23 +48,32 @@ Project: ${projectName}
 
 You are REQUIRED to follow PM Agent workflow on EVERY response. These are not suggestions — they are ENFORCED at the hook level.
 
-▸ The PreToolUse hook BLOCKS EVERY tool call unless you call PM Agent tools first.
-▸ You MUST call pm_get_context in EVERY response before using any other tool.
-▸ Without pm_get_context, ALL Write, Read, Bash, Edit, and MCP tool calls are BLOCKED.
-▸ Only AskUserQuestion and pm_* tools are allowed to pass through.
+▸ The PreToolUse hook BLOCKS EVERY tool call unless you call PM Agent CLI commands first.
+▸ You MUST run ! pm context or ! pm status in EVERY response before using any other tool.
+▸ Without it, ALL Write, Read, Bash, Edit, and other tool calls are BLOCKED.
+▸ Only AskUserQuestion is allowed to pass through.
 
 DECISION LOGGING IS PER-RESPONSE (NOT SESSION-PERSISTENT):
-▸ pm_log_decision must be called in EVERY response before any write/destructive tool.
-▸ The hook WILL BLOCK write tools if pm_log_decision hasn't been called in THIS response.
+▸ ! pm log must be run in EVERY response before any write/destructive tool.
+▸ The hook WILL BLOCK write tools if ! pm log hasn't been called in THIS response.
 ▸ Log ALL architectural decisions, feature implementations, and configuration changes.
 ▸ Not logging a decision before modifying files is a VIOLATION.
 
 WORKFLOW FOR EVERY RESPONSE:
-  1. pm_get_context — get project snapshot
-  2. pm_get_blockers — check active blockers
-  3. pm_log_decision — log what you intend to do (BEFORE writing files)
-  4. Proceed with write tools (allowed only after step 3)
-  5. pm_log_note — log insights discovered during work
+  1. ! pm context — load project snapshot (BLOCKED without this)
+  2. ! pm log "What you are doing and why" — log your intent (BLOCKED for writes without this)
+  3. Proceed with write tools (allowed only after step 2)
+  4. ! pm note "insight" — log anything discovered during work
+
+Available CLI commands from Claude Code:
+  ! pm status         — Project overview
+  ! pm blockers       — Check active blockers
+  ! pm log "Title"    — Log a decision
+  ! pm note "text"    — Take a note
+  ! pm scope "desc"   — Check sprint scope
+  ! pm standup        — Standup summary
+  ! pm search "term"  — Full-text search
+  ! pm enforce        — Run rules engine
 
 Active project rules:
 ${rulesBlock}

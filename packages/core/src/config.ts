@@ -60,14 +60,22 @@ function walkAndInterpolate(obj: unknown): unknown {
 }
 
 function resolveConfigPath(): string {
-  return (
-    process.env.PM_AGENT_CONFIG ||
-    path.join(
-      process.env.HOME || process.env.USERPROFILE || '~',
-      '.config',
-      'pm-agent',
-      'config.toml',
-    )
+  // Priority: env var → project-local .pm-agent/config.toml → ~/.config/pm-agent/config.toml
+  if (process.env.PM_AGENT_CONFIG) {
+    return process.env.PM_AGENT_CONFIG;
+  }
+
+  const cwd = process.cwd();
+  const localPath = path.join(cwd, '.pm-agent', 'config.toml');
+  if (fs.existsSync(localPath)) {
+    return localPath;
+  }
+
+  return path.join(
+    process.env.HOME || process.env.USERPROFILE || '~',
+    '.config',
+    'pm-agent',
+    'config.toml',
   );
 }
 

@@ -23,14 +23,17 @@ export interface RunResult {
 
 export class Statement {
   private db: SqlJsDatabase;
+  private wrapper: DbWrapper;
   private sql: string;
 
-  constructor(db: SqlJsDatabase, sql: string) {
+  constructor(db: SqlJsDatabase, wrapper: DbWrapper, sql: string) {
     this.db = db;
+    this.wrapper = wrapper;
     this.sql = sql;
   }
 
   run(...params: unknown[]): RunResult {
+    this.wrapper._scheduleSave();
     const bindParams = params.length > 0 ? params : undefined;
     this.db.run(this.sql, bindParams as any);
     const changes = this.db.getRowsModified();
@@ -75,10 +78,21 @@ export class Statement {
 export class DbWrapper {
   private db: SqlJsDatabase;
   private filePath: string | null;
+  private _saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(db: SqlJsDatabase, filePath: string | null = null) {
     this.db = db;
     this.filePath = filePath;
+  }
+
+  _scheduleSave(): void {
+    if (this._saveDebounceTimer) {
+      clearTimeout(this._saveDebounceTimer);
+    }
+    this._saveDebounceTimer = setTimeout(() => {
+      this.save();
+      this._saveDebounceTimer = null;
+    }, 500);
   }
 
   exec(sql: string): void {
@@ -86,7 +100,7 @@ export class DbWrapper {
   }
 
   prepare(sql: string): Statement {
-    return new Statement(this.db, sql);
+    return new Statement(this.db, this, sql);
   }
 
   close(): void {
@@ -204,23 +218,6 @@ const migrations: Migration[] = [
     },
   },
   {
-    name: '003_semantic_index',
-    up: (db) => {
-      db.exec(`
-        CREATE TABLE IF NOT EXISTS file_summaries (
-          path TEXT PRIMARY KEY,
-          summary TEXT,
-          purpose TEXT,
-          exports TEXT DEFAULT '[]',
-          imports TEXT DEFAULT '[]',
-          key_types TEXT DEFAULT '[]',
-          generated_at TEXT,
-          created_at TEXT DEFAULT (datetime('now'))
-        );
-      `);
-    },
-  },
-  {
     name: '002_codebase_intelligence',
     up: (db) => {
       db.exec(`
@@ -262,6 +259,23 @@ const migrations: Migration[] = [
 
         -- Standalone FTS4 table (no external content — sql.js WASM doesn't support content=/content_rowid=)
         CREATE VIRTUAL TABLE IF NOT EXISTS doc_fts USING fts4(path, title, content);
+      `);
+    },
+  },
+  {
+    name: '003_semantic_index',
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS file_summaries (
+          path TEXT PRIMARY KEY,
+          summary TEXT,
+          purpose TEXT,
+          exports TEXT DEFAULT '[]',
+          imports TEXT DEFAULT '[]',
+          key_types TEXT DEFAULT '[]',
+          generated_at TEXT,
+          created_at TEXT DEFAULT (datetime('now'))
+        );
       `);
     },
   },
@@ -384,12 +398,16 @@ export function generateId(db: DbWrapper, prefix: IdPrefix): string {
     TASK: 'tasks',
   };
 
+  if (!(prefix in tableMap)) {
+    throw new Error(`Invalid ID prefix: ${prefix}. Must be one of: ${Object.keys(tableMap).join(', ')}`);
+  }
+
   const table = tableMap[prefix];
   let lastId = 0;
 
   const row = db
-    .prepare(`SELECT id FROM ${table} WHERE id LIKE '${prefix}-%' ORDER BY id DESC LIMIT 1`)
-    .get() as { id: string } | undefined;
+    .prepare(`SELECT id FROM ${table} WHERE id LIKE ? ORDER BY id DESC LIMIT 1`)
+    .get(`${prefix}-%`) as { id: string } | undefined;
 
   if (row) {
     const numericPart = parseInt(row.id.split('-')[1]!, 10);
