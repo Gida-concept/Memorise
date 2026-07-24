@@ -3,7 +3,7 @@ import { getCommandContext, closeCommandContext, outputJson, shouldOutputJson } 
 import { Colors, formatCard } from '../formatters.js';
 
 export async function statusCommand(opts: Record<string, any>): Promise<void> {
-  const ctx = getCommandContext(opts);
+  const ctx = await getCommandContext(opts);
 
   try {
     const decisions = listDecisions(ctx.db, { limit: 5 });

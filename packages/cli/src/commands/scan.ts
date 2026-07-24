@@ -16,7 +16,7 @@ export async function scanCommand(opts: Record<string, any>): Promise<void> {
 
   const dataDir = config.memory?.path || getDefaultDataDir(config.project.name);
   const dbPath = path.isAbsolute(dataDir) ? dataDir : path.resolve(config.project.root, dataDir);
-  const db = openDb({ path: dbPath });
+  const db = await openDb({ path: dbPath });
 
   try {
     const root = config.project.root;

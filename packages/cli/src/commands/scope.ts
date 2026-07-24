@@ -11,7 +11,7 @@ export async function scopeCommand(description: string, opts: Record<string, any
     throw new PmCliError('--committed <days> is required for scope check', ExitCode.GENERAL_ERROR);
   }
 
-  const ctx = getCommandContext(opts);
+  const ctx = await getCommandContext(opts);
 
   try {
     const sprintName = opts.sprint || getLatestScope(ctx.db)?.sprint_name || 'current';

@@ -1,14 +1,13 @@
-import { loadConfig, openDb, closeDb, getDefaultDataDir, type PmAgentConfig } from '@gida-concept/pm-agent-core';
-import type Database from 'better-sqlite3';
+import { loadConfig, openDb, closeDb, getDefaultDataDir, type PmAgentConfig, type Database } from '@gida-concept/pm-agent-core';
 import path from 'path';
 
 export interface CommandContext {
   config: PmAgentConfig;
-  db: Database.Database;
+  db: Database;
   opts: Record<string, any>;
 }
 
-export function getCommandContext(opts: Record<string, any>): CommandContext {
+export async function getCommandContext(opts: Record<string, any>): Promise<CommandContext> {
   const configPath = opts.config || process.env.PM_AGENT_CONFIG || undefined;
   const config = loadConfig(configPath);
 
@@ -16,7 +15,7 @@ export function getCommandContext(opts: Record<string, any>): CommandContext {
   // Resolve relative to project root if not absolute
   const dbPath = path.isAbsolute(dataDir) ? dataDir : path.resolve(config.project.root, dataDir);
 
-  const db = openDb({ path: dbPath });
+  const db = await openDb({ path: dbPath });
 
   return { config, db, opts };
 }

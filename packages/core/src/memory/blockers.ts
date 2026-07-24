@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { DbWrapper } from '../db.js';
 import { generateId } from '../db.js';
 import { safeParseJson } from '../utils/json.js';
 
@@ -24,7 +24,7 @@ function parseBlocker(row: any): Blocker {
 }
 
 export function createBlocker(
-  db: Database.Database,
+  db: DbWrapper,
   data: { title: string; description?: string; blocked_by?: string; links?: string[] },
 ): Blocker {
   const id = generateId(db, 'BLK');
@@ -36,12 +36,12 @@ export function createBlocker(
   return getBlocker(db, id)!;
 }
 
-export function getBlocker(db: Database.Database, id: string): Blocker | undefined {
+export function getBlocker(db: DbWrapper, id: string): Blocker | undefined {
   const row = db.prepare('SELECT * FROM blockers WHERE id = ?').get(id) as any;
   return row ? parseBlocker(row) : undefined;
 }
 
-export function resolveBlocker(db: Database.Database, id: string): void {
+export function resolveBlocker(db: DbWrapper, id: string): void {
   const result = db.prepare('UPDATE blockers SET status = ? WHERE id = ? AND status = ?').run('resolved', id, 'open');
   if (result.changes === 0) {
     const existing = db.prepare('SELECT status FROM blockers WHERE id = ?').get(id) as any;
@@ -51,7 +51,7 @@ export function resolveBlocker(db: Database.Database, id: string): void {
 }
 
 export function getActiveBlockers(
-  db: Database.Database,
+  db: DbWrapper,
   opts?: { min_age_hours?: number; limit?: number },
 ): Blocker[] {
   let sql = 'SELECT * FROM blockers WHERE status = ?';
@@ -73,7 +73,7 @@ export function getActiveBlockers(
 }
 
 export function getBlockers(
-  db: Database.Database,
+  db: DbWrapper,
   opts?: { status?: 'open' | 'resolved' | 'all'; limit?: number },
 ): Blocker[] {
   let sql = 'SELECT * FROM blockers WHERE 1=1';

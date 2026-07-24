@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { DbWrapper } from '../db.js';
 import type { Decision } from '../memory/decisions.js';
 
 export interface ImpactReport {
@@ -20,7 +20,7 @@ export interface ImpactReport {
  * then links PM context that references the file.
  */
 export function analyzeImpact(
-  db: Database.Database,
+  db: DbWrapper,
   filePath: string,
   depth = 2,
 ): ImpactReport {

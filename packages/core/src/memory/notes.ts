@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { DbWrapper } from '../db.js';
 import { generateId } from '../db.js';
 import { safeParseJson } from '../utils/json.js';
 
@@ -19,7 +19,7 @@ function parseNote(row: any): Note {
 }
 
 export function createNote(
-  db: Database.Database,
+  db: DbWrapper,
   data: { content: string; tags?: string[]; links?: string[] },
 ): Note {
   const id = generateId(db, 'NOTE');
@@ -31,13 +31,13 @@ export function createNote(
   return getNote(db, id)!;
 }
 
-export function getNote(db: Database.Database, id: string): Note | undefined {
+export function getNote(db: DbWrapper, id: string): Note | undefined {
   const row = db.prepare('SELECT * FROM notes WHERE id = ?').get(id) as any;
   return row ? parseNote(row) : undefined;
 }
 
 export function searchNotes(
-  db: Database.Database,
+  db: DbWrapper,
   opts?: { tag?: string; search?: string; limit?: number; since?: string },
 ): Note[] {
   let sql = 'SELECT * FROM notes WHERE 1=1';
@@ -68,6 +68,6 @@ export function searchNotes(
   return (db.prepare(sql).all(...params) as any[]).map(parseNote);
 }
 
-export function getNotesByTag(db: Database.Database, tag: string): Note[] {
+export function getNotesByTag(db: DbWrapper, tag: string): Note[] {
   return searchNotes(db, { tag });
 }

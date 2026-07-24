@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { DbWrapper } from '../db.js';
 import * as https from 'https';
 import type { PmAgentConfig } from '../config.js';
 import type { Integration } from './types.js';
@@ -74,7 +74,7 @@ export class LinearIntegration implements Integration {
     }
   }
 
-  async fetchBlockers(db: Database.Database): Promise<Blocker[]> {
+  async fetchBlockers(db: DbWrapper): Promise<Blocker[]> {
     const issues = await this._fetchIssues('state: { type: { eq: "blocked" } }');
     const blockers: Blocker[] = [];
 
@@ -93,7 +93,7 @@ export class LinearIntegration implements Integration {
     return blockers;
   }
 
-  async fetchDecisions(db: Database.Database): Promise<Decision[]> {
+  async fetchDecisions(db: DbWrapper): Promise<Decision[]> {
     const issues = await this._fetchIssues('labels: { name: { eq: "decision" } }');
     const decisions: Decision[] = [];
 
@@ -110,7 +110,7 @@ export class LinearIntegration implements Integration {
     return decisions;
   }
 
-  async fetchTasks(db: Database.Database): Promise<Task[]> {
+  async fetchTasks(db: DbWrapper): Promise<Task[]> {
     // Fetch all active (non-done, non-canceled) issues
     const issues = await this._fetchIssues('state: { type: { nin: ["done", "canceled"] } }');
     const tasks: Task[] = [];

@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { DbWrapper } from '../db.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -137,7 +137,7 @@ export function detectRole(filePath: string, framework?: string): ArchitectureRo
 /**
  * Batch store architecture entries in the database.
  */
-export function storeArchitecture(db: Database.Database, entries: ArchitectureEntry[]): void {
+export function storeArchitecture(db: DbWrapper, entries: ArchitectureEntry[]): void {
   const insert = db.prepare(`
     INSERT OR REPLACE INTO architecture_map (path, role, framework, metadata)
     VALUES (?, ?, ?, ?)

@@ -5,8 +5,8 @@ import { Colors, formatTable } from '../formatters.js';
 import { ExitCode } from '../exit-codes.js';
 import { PmCliError } from '../errors.js';
 
-function getRulesPath(opts: Record<string, any>): string {
-  const ctx = getCommandContext(opts);
+async function getRulesPath(opts: Record<string, any>): Promise<string> {
+  const ctx = await getCommandContext(opts);
   const rulesPath = ctx.config.rules?.config_path;
   closeCommandContext(ctx);
 
@@ -17,7 +17,7 @@ function getRulesPath(opts: Record<string, any>): string {
 }
 
 export async function rulesCommand(subcommand: string | undefined, subOpts: Record<string, any>, opts: Record<string, any>): Promise<void> {
-  const rulesPath = getRulesPath(opts);
+  const rulesPath = await getRulesPath(opts);
 
   switch (subcommand) {
     case 'list': {

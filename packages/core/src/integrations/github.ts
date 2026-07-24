@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { DbWrapper } from '../db.js';
 import { execSync } from 'child_process';
 import * as https from 'https';
 import type { PmAgentConfig } from '../config.js';
@@ -128,7 +128,7 @@ export class GitHubIntegration implements Integration {
    * Fetch open PRs as blockers.
    * Creates a blocker for each PR that has no reviews (unreviewed) and has been open > 24h.
    */
-  async fetchBlockers(db: Database.Database): Promise<Blocker[]> {
+  async fetchBlockers(db: DbWrapper): Promise<Blocker[]> {
     return this._paginatedRequest('/pulls?state=open&per_page=100', async (pr: GitHubPR) => {
       const ageHours = (Date.now() - new Date(pr.updated_at).getTime()) / 3600000;
       if (ageHours < 24) return null; // Only block on PRs > 24h stale
@@ -156,7 +156,7 @@ export class GitHubIntegration implements Integration {
   /**
    * Fetch closed issues with "decision" label as decisions.
    */
-  async fetchDecisions(db: Database.Database): Promise<Decision[]> {
+  async fetchDecisions(db: DbWrapper): Promise<Decision[]> {
     return this._paginatedRequest('/issues?state=closed&labels=decision&per_page=100', async (issue: GitHubIssue) => {
       return createDecision(db, {
         title: `[GitHub] ${issue.title}`,
@@ -170,7 +170,7 @@ export class GitHubIntegration implements Integration {
   /**
    * Fetch open issues as tasks (excluding pull requests).
    */
-  async fetchTasks(db: Database.Database): Promise<Task[]> {
+  async fetchTasks(db: DbWrapper): Promise<Task[]> {
     return this._paginatedRequest('/issues?state=open&per_page=100', async (issue: GitHubIssue) => {
       // Skip pull requests (GitHub API returns both issues and PRs)
       if (issue.html_url?.includes('/pull/')) return null;

@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { DbWrapper } from '../db.js';
 import type { PmAgentConfig } from '../config.js';
 import type { Blocker } from '../memory/blockers.js';
 import type { Decision } from '../memory/decisions.js';
@@ -8,9 +8,9 @@ export interface Integration {
   name: string;
   detect(config: PmAgentConfig): Promise<boolean>;
   connect(config: PmAgentConfig): Promise<void>;
-  fetchBlockers(db: Database.Database): Promise<Blocker[]>;
-  fetchDecisions(db: Database.Database): Promise<Decision[]>;
-  fetchTasks(db: Database.Database): Promise<Task[]>;
+  fetchBlockers(db: DbWrapper): Promise<Blocker[]>;
+  fetchDecisions(db: DbWrapper): Promise<Decision[]>;
+  fetchTasks(db: DbWrapper): Promise<Task[]>;
 }
 
 export class IntegrationError extends Error {

@@ -5,7 +5,7 @@ import { ExitCode } from '../exit-codes.js';
 import { PmCliError } from '../errors.js';
 
 export async function blockersCommand(opts: Record<string, any>): Promise<void> {
-  const ctx = getCommandContext(opts);
+  const ctx = await getCommandContext(opts);
 
   try {
     // Handle --resolve

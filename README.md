@@ -1,13 +1,13 @@
 ```
                            ╭──────────────────────╮
                            │     PM AGENT         │
-                           │  memory · rules · mcp │
+                           │  memory · rules · cli │
                            ╰──────────┬───────────╯
                                       │
         ┌─────────────┬───────────────┼───────────────┬─────────────┐
         │             │               │               │             │
     ╭───┴───╮    ╭───┴───╮       ╭───┴───╮       ╭───┴───╮    ╭───┴───╮
-    │  CLI  │    │  IDE  │       │  MCP  │       │ HOOK  │    │  WEB  │
+    │  CLI  │    │  IDE  │       │ HOOKS │       │ FILE  │    │  WEB  │
     ╰───┬───╯    ╰───┬───╯       ╰───┬───╯       ╰───┬───╯    ╰───┬───╯
         │             │               │               │             │
         └────────┬────┘               │               └──────┬──────┘
@@ -51,7 +51,7 @@ PM Agent fills that gap. It's not an AI. It's the **nervous system** your AI tal
 | -------------------------------------------------------------------------------------------------- | ----------------------------------------- |
 | A **memory layer** that recalls decisions, blockers, and context across sessions                   | An AI that generates plans or writes code |
 | A **rules engine** that enforces PM guardrails (scope checks, decision logging, blocker surfacing) | A replacement for Linear, Jira, or Notion |
-| A **context provider** that feeds structured project state to your AI via MCP                      | A standalone chatbot or dashboard         |
+| A **context provider** that feeds structured project state to your AI via CLI commands and hooks    | A standalone chatbot or dashboard         |
 | A **note-taker** that captures and links everything without you thinking about it                  | A tool that requires manual data entry    |
 
 **Your AI brings the brain. PM Agent brings the memory and the rules.**
@@ -65,7 +65,7 @@ PM Agent fills that gap. It's not an AI. It's the **nervous system** your AI tal
 | **Memory, not intelligence** | We remember. Your AI (Claude, GPT, local LLM) thinks. We just make sure it has the right context                               |
 | **Rules, not suggestions**   | Enforceable guardrails: log decisions before closing tickets, check scope before adding work, surface blockers before standup  |
 | **Ambient, not app**         | You don't open PM Agent. It's already there when you type                                                                      |
-| **Bring your own AI**        | Works with Claude Code, OpenCode, Codex CLI, Cursor, Zed, or any MCP-compatible agent. Uses your keys, your model, your config |
+| **Bring your own AI**        | Works with Claude Code, OpenCode, Codex CLI, Cursor, or any AI coding tool. Uses your keys, your model, your config |
 | **Local-first**              | Your project state lives in SQLite on your machine. No cloud required. Team sync is opt-in, encrypted                          |
 
 ---
@@ -139,10 +139,10 @@ Rules are **enforced**, not suggested. The agent can't proceed until the rule is
 
 ### 3. Context Provider — "What Your AI Needs to Know"
 
-Exposed as an **MCP server** so any AI agent can query project state:
+Exposed as a **CLI tool** so any AI agent can query project state:
 
 ```json
-// MCP tool: pm_get_context
+// CLI: pm status — project context
 {
   "project": "auth-service",
   "sprint": "Sprint 14",
@@ -167,61 +167,36 @@ Your AI asks. PM Agent answers. No hallucination, no stale context.
 
 ### Installation
 
-**Option A — Run via npx (no install, works anywhere):**
-
-Use this if you don't want `pm` on your system PATH. Every command starts with `npx`:
-
-```bash
-cd your-project
-npx @gida-concept/pm-agent-cli init
-npx @gida-concept/pm-agent-cli scan
-npx @gida-concept/pm-agent-cli status
-```
-
-Make an alias in your shell profile to save keystrokes:
-```powershell
-# PowerShell (edit with: notepad $PROFILE)
-function pm { npx @gida-concept/pm-agent-cli $args }
-```
-```bash
-# ~/.bashrc
-alias pm='npx @gida-concept/pm-agent-cli'
-```
-
-**Option B — Global install (optional, makes `pm` directly available):**
+**Recommended — global install (one command, works everywhere):**
 
 ```bash
 npm install -g @gida-concept/pm-agent-cli
-pm --help
 ```
 
-> **Windows PowerShell users:** Without a global install, `pm` is not on PATH. Use Option A (`npx @gida-concept/pm-agent-cli <command>`) or install globally with Option B.
+That installs the CLI and everything it needs (native SQLite, hooks, etc.) into one place. Then just use `pm` from any project directory.
 
-**From source (development):**
+> **Windows PowerShell users:** After global install, if `pm` isn't recognized, restart your terminal or see [the install guide](docs/INSTALL.md#windows-users--powershell-path) for the one-time PATH fix.
 
-```bash
-git clone https://github.com/Gida-concept/Memorise.git
-cd Memorise
-npm install
-npm run build
-npm link
-pm --help
-```
+**Other options** (npx, local install, from source) — see the full [Installation Guide](docs/INSTALL.md) for details and troubleshooting.
 
 ### Initialize in Your Project
 
-Config stays **project-local** — `pm init` generates `.pm-agent/` in your project root.
-The shipped package uses empty placeholder values; your real paths are filled in locally.
-Do not edit a global `~/.config/pm-agent/config.toml` — that global path is unused unless you create it manually.
+Config and data stay **project-local** — everything goes in `.pm-agent/` in your project root, never globally.
 
 ```bash
 $ cd your-project
 $ pm init
-→ Created: your-project/.pm-agent/config.toml
-→ Created: your-project/.pm-agent/rules.toml
-→ Created: your-project/.pm-agent/pm-agent.db
-→ Created: your-project/.mcp.json (MCP server config)
+✔ PM Agent initialized for "your-project"
+
+Config:    /home/you/your-project/.pm-agent/config.toml
+Database:  /home/you/your-project/.pm-agent/pm.db
+Rules:     /home/you/your-project/.pm-agent/rules.toml
+CLAUDE.md: /home/you/your-project/CLAUDE.md
 ```
+
+`pm init` sets up **everything** in one command: project config, database, rules, Claude Code hooks, CLAUDE.md with AI instructions, and an initial codebase scan.
+
+Do not edit a global `~/.config/pm-agent/config.toml` — that global path is unused unless you create it manually.
 
 ### Daily Usage
 
@@ -298,271 +273,81 @@ $ pm scan --watch
 
 ## Integration with Your AI
 
-PM Agent is **not** an AI. It uses **your** AI via the **Model Context Protocol (MCP)** — a standard way for AI assistants to interact with tools.
+PM Agent is **not** an AI. It uses **your** AI via **Claude Code hooks** — the pre-tool-use and session-start hooks automatically load your project context into every AI interaction.
 
-When you configure PM Agent as an MCP server, your AI assistant (Claude Code, Cursor, etc.) can:
-- Query project state (blockers, decisions, tasks) inline while you code
-- Log decisions and enforce rules before you commit
-- Surface blockers, sprint risks, and pending decisions in your workflow
+When you configure PM Agent hooks (via `pm init` or `pm hooks setup`), your AI assistant automatically:
+- Queries project state (blockers, decisions, tasks) inline while you code
+- Logs decisions and enforces rules before you commit
+- Surfaces blockers, sprint risks, and pending decisions in your workflow
 
-> **No external API keys or environment variables needed.** The PM Agent MCP server uses `stdio` transport — it runs locally as a child process and reads your project files directly from disk.
+> **No external API keys or environment variables needed.** Everything runs locally from your project's `.pm-agent/` directory.
+
+### Usage from AI Coding Tools
+
+After running `pm init`, use the CLI with `! pm <command>` from any coding tool:
+
+```
+! pm status        — Project overview
+! pm log "Title"   — Log a decision
+! pm blockers      — Check blockers
+! pm scope "desc"  — Check scope
+! pm note "text"   — Take a note
+! pm standup       — Standup summary
+```
+
+All commands support `--json` output for programmatic use by AI agents. PM Agent hooks (Claude Code `PreToolUse` and `SessionStart`) automatically load project context and enforce rules without any config file editing.
 
 ---
+## Automatic AI Awareness — Claude Code Hooks
 
-### Quick Start (All CLIs)
+PM Agent ships with **Claude Code hooks** that are auto-installed by `pm init` (or manually via `pm hooks setup`). These hooks inject your project's context and enforce your rules automatically on every interaction — no manual prompting or config file edits needed.
 
-1. **Install Node.js** (v18+) if you don't have it.
-2. Pick your AI tool below and add the config shown.
-3. **Restart** the tool (config is only read at startup).
-4. **Verify** by asking your AI about blockers or decisions — it should call PM Agent automatically.
+### What the Hooks Do
 
-The correct command is always this npx invocation:
+| Hook | Trigger | Behavior |
+|------|---------|----------|
+| **Session Start** | Every new Claude Code session | Loads project state, checks blockers, surfaces rules |
+| **Pre-Tool Use** | Before every tool call | Evaluates code rules against changes, blocks violations |
+| **Pre-Exit** | Before Claude Code exits | Prompts to log pending decisions, notes blockers |
 
-```
-npx -y @gida-concept/pm-agent-mcp-server
-```
+### How It Works
 
-The `-y` flag tells npx to skip the "install this package?" prompt so the AI tool can start the server automatically.
+1. **`pm init`** creates the hooks in `.claude/hooks/` and generates `CLAUDE.md` with PM Agent instructions
+2. Every time Claude Code starts, the session-start hook reads the `.pm-agent/` database and injects context into the system prompt
+3. Before every file write or commit, the pre-tool-use hook evaluates active rules (e.g., "no `any` types", "tests before merge") and blocks violations
+4. Your AI gets full project context automatically — blockers, decisions, notes, scope, and rules — without you having to type `! pm status`
 
----
+### Hooks for Other Clients
 
-### Claude Code
-
-**Config file:** Create `./.mcp.json` in your project root:
-
-```json
-{
-  "mcpServers": {
-    "pm-agent": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@gida-concept/pm-agent-mcp-server"]
-    }
-  }
-}
-```
-
-Alternatively, add the same object to your user-level config at `~/.claude.json` under `mcpServers`.
-
-Then:
-
-```bash
-$ claude
-> What should I work on today?
-  [Claude calls pm_get_context via MCP]
-  [Claude sees: 2 blockers, 1 pending decision, sprint at risk]
-  → "You have 2 blockers. PR #442 needs a review ping.
-      Also, decision ADR-004 is pending stakeholder sign-off."
-
-> Log that we're dropping OAuth
-  [Claude calls pm_log_decision]
-  → "Decision logged as ADR-004. Linked to PR #442 and AUTH-91."
-
-> Can we add dark mode to this sprint?
-  [Claude calls pm_scope_check]
-  → "Scope check: +3 days design, +2 days frontend.
-      Sprint has 4 days left. Risk: HIGH. Confirm?"
-```
-
-**Verify:** Restart Claude Code, then run `/mcp` — you should see `pm-agent` in the connected servers list.
-
----
-
-### Cursor
-
-**Config file:** Create `.cursor/mcp.json` in your project root (or `~/.cursor/mcp.json` globally):
-
-```json
-{
-  "mcpServers": {
-    "pm-agent": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@gida-concept/pm-agent-mcp-server"]
-    }
-  }
-}
-```
-
-**Verify:** Restart Cursor. Open the MCP panel (gear icon → Features → MCP) — `pm-agent` should show as connected. Then try asking Cursor's AI: *"What are my current blockers?"*
-
-> **Note:** Cursor v0.45+ reads `.cursor/mcp.json` automatically. Older versions may need the config in `~/.cursor/mcp.json` or in VS Code-style `settings.json` under `mcp.servers`.
-
----
-
-### OpenCode
-
-**Config file:** Create `opencode.json` (or `opencode.jsonc`) in your project root:
-
-```jsonc
-{
-  "$schema": "https://opencode.ai/config.json",
-  "mcp": {
-    "pm-agent": {
-      "type": "local",
-      "command": ["npx", "-y", "@gida-concept/pm-agent-mcp-server"],
-      "enabled": true
-    }
-  }
-}
-```
-
-**Verify:** Restart OpenCode and ask: *"Show my current project context."* The AI should call the PM Agent tools automatically.
-
----
-
-### Continue.dev
-
-**Config file:** Add to `~/.continue/config.json` (or `.continue/config.yaml` in your project):
-
-```json
-{
-  "mcpServers": [
-    {
-      "name": "pm-agent",
-      "command": "npx",
-      "args": ["-y", "@gida-concept/pm-agent-mcp-server"]
-    }
-  ]
-}
-```
-
-> Note: Continue.dev uses an **array** (not an object) for `mcpServers`. Each server is a list item with a `name` field.
-
-In YAML format (`config.yaml`):
-
-```yaml
-mcpServers:
-  - name: pm-agent
-    command: npx
-    args:
-      - "-y"
-      - "@gida-concept/pm-agent-mcp-server"
-```
-
-**Verify:** Open Continue, start a new chat, and ask: *"What decisions are pending?"*
-
----
-
-### Zed
-
-**Config file:** Add to `~/.config/zed/settings.json`:
-
-```json
-{
-  "mcp_servers": {
-    "pm-agent": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@gida-concept/pm-agent-mcp-server"]
-    }
-  }
-}
-```
-
-> Note: Zed uses **snake_case** (`mcp_servers`, not `mcpServers`).
-
-**Verify:** Restart Zed. Open the Assistant panel — the PM Agent tools should be available to the AI.
-
----
-
-### OpenAI Codex CLI
-
-**Config file:** Create `codexrc.toml` or add to `config.toml` in your project:
-
-```toml
-[mcp_servers.pm-agent]
-enabled = true
-
-[mcp_servers.pm-agent.transport]
-type = "stdio"
-command = "npx"
-args = ["-y", "@gida-concept/pm-agent-mcp-server"]
-```
-
-**Verify:** Restart Codex and ask: *"What blockers do I have?"*
-
-> **Note:** Codex CLI uses TOML format. The exact schema may evolve — if this exact structure doesn't work, check the [Codex CLI docs](https://github.com/openai/codex) for the latest `[mcp_servers]` configuration reference.
-
----
-
-### General Tips
-
-| Tip | Details |
-|-----|---------|
-| **Restart required** | Config is only read when the tool starts. Always restart after editing config files. |
-| **One server, many tools** | PM Agent exposes 17+ tools. Your AI picks the right one — you don't need to configure individual tools. |
-| **No env vars needed** | The server runs locally and reads your project files directly. |
-| **Project vs user scope** | Project-level config (`.mcp.json`, `.cursor/mcp.json`) is portable with your repo. User-level config (`~/.claude.json`, `~/.config/zed/settings.json`) applies across all projects. |
-| **Stuck?** | Run `npx -y @gida-concept/pm-agent-mcp-server` directly in your terminal. If it errors, check Node.js is v18+. If it starts without error, the package works — the issue is in your config file path or restart step. |
-
-
----
-## Automatic AI Awareness — Server Instructions
-
-PM Agent ships with a **server-level `instructions` field** (MCP spec) that gets auto-injected into your AI's system prompt on every request. This means:
-
-- **You don't need to remind the AI** to check context — it's baked into its instructions
-- **Every MCP-compatible client** that supports server instructions gets this automatically
-- **The AI proactively calls PM Agent tools** without you having to ask
-
-### What Happens Under the Hood
-
-When the PM Agent MCP server initializes (the `initialize` handshake), the instructions text is sent to the client. The client injects these instructions into the LLM's system prompt. The AI then follows them on every interaction — no manual prompting needed.
-
-### What the AI Is Told to Do
-
-The auto-injected instructions tell the AI to:
-
-1. **Before proposing changes** — call `pm_get_context` to check current project state (blockers, decisions, rules)
-2. **Before modifying scope** — call `pm_check_scope` to verify sprint capacity and risk
-3. **Check rules** — call `pm_enforce_rules` or `pm_get_decisions` before finalizing any change that could affect project direction
-4. **Log decisions** — after reaching significant agreement, call `pm_log_decision` to persist the rationale
-5. **Review notes** — call `pm_get_notes` to check recent observations before starting new work
-6. **Check blockers** — call `pm_get_blockers` before planning work that might conflict with blocked items
-
-### Client Support
-
-| Client | Supports Server Instructions? |
-|--------|------------------------------|
-| **Claude Code** | ✅ Yes (auto via MCP spec) |
-| **Cursor** | ✅ Yes |
-| **Zed** | ✅ Yes |
-| **OpenCode** | ✅ Yes |
-| **Codex CLI** | ✅ Yes |
-| **Most MCP clients (SDK v1.0+)** | ✅ Yes |
-
-### Fallback for Clients Without Support
-
-If your MCP client doesn't support server-level `instructions`, create a `CLAUDE.md` or `AGENTS.md` in your project root with:
+For AI coding tools that don't support hooks natively, create or update a `CLAUDE.md` (or `AGENTS.md`, `CURSOR_RULES`, etc.) in your project root:
 
 ```markdown
 ## Required PM Agent Behavior
 
 Before every response, you MUST:
-1. Call `pm_get_context` to check current project state
-2. Check `pm_get_blockers` before planning work
-3. Enforce active rules via `pm_enforce_rules` before finalizing decisions
-4. Log decisions via `pm_log_decision` after reaching agreements
+1. Run `! pm status` to check current project state
+2. Run `! pm blockers` before planning work
+3. Run `! pm rules list` before finalizing decisions
+4. Run `! pm log <title>` after reaching significant agreements
 ```
 
-Your AI will read these instructions and follow them.
+Your AI reads these instructions on every interaction and follows them.
 
 ---
 
 ### Auto-Enforcement — Rules That Actually Block
 
-> **New in v0.1.3** — Rules are now evaluated **automatically on every tool call**. No manual calling of `pm_enforce_rules` required.
+> Rules are evaluated **automatically on every CLI command**. No manual enforcement needed.
 
-When a rule's scope is `all` (or matches the tool's context), the engine checks it before the tool executes. If a **hard** rule's trigger matches, the call is **blocked** and the rule's message is returned instead.
+When a rule's scope is `all` (or matches the command's context), the engine checks it before the command executes. If a **hard** rule's trigger matches, the command is **blocked** and the rule's message is returned instead.
 
 #### How It Works
 
-Every tool call generates a context object with:
+Every command invocation generates a context object with:
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `tool_name` | The MCP tool being called | `pm_log_decision` |
+| `tool_name` | The command being invoked | `log` |
 | `operation` | Inferred operation type | `read`, `log`, `add`, `scan` |
 | `entity` | Inferred target entity | `context`, `decision`, `note` |
 | `tool_args` | Full arguments object | `{title, body, author}` |
@@ -573,11 +358,11 @@ Every tool call generates a context object with:
 Triggers must be **boolean expressions** using the expression engine (`==`, `!=`, `contains()`, `&&`, `||`):
 
 ```toml
-# Good — expression-compatible trigger that matches a tool
+# Good — expression-compatible trigger that matches a CLI command
 [[rule]]
 scope = "all"
 name = "ask-permission-decisions"
-trigger = "tool_name == 'pm_log_decision'"
+trigger = "tool_name == 'log'"
 condition = "body && (body.contains('architecture') || body.contains('scope'))"
 action = "block: 'Decision may affect project direction ({title}). Ask permission first.'"
 severity = "hard"
@@ -587,25 +372,28 @@ description = "Blocks decision logging without permission."
 trigger = "about to make a significant decision"  # ✗ won't work
 ```
 
-**Important:** Auto-enforcement does NOT apply to `pm_enforce_rules` and `pm_add_rule` themselves (to avoid loops and allow rule management).
+**Important:** Auto-enforcement does NOT apply to the `rules` subcommands themselves (to avoid loops and allow rule management).
 
 ---
 
-## MCP Tools Exposed
+## CLI Commands
 
-| Tool               | What Your AI Can Ask                              |
-| ------------------ | ------------------------------------------------- |
-| `pm_get_context`   | "What's the current project state?"               |
-| `pm_get_blockers`  | "What's blocking me?"                             |
-| `pm_get_decisions` | "What decisions have been made?"                  |
-| `pm_get_scope`     | "What's the sprint capacity?"                     |
-| `pm_get_notes`     | "What did we discuss in the last meeting?"        |
-| `pm_log_decision`  | "Log this decision" (enforces rules)              |
-| `pm_log_note`      | "Take a note" (auto-links to context)             |
-| `pm_check_scope`   | "Can we add this to the sprint?" (enforces rules) |
-| `pm_get_standup`   | "What did I do yesterday?"                        |
-| `pm_prep_meeting`  | "Prep me for the 2pm meeting"                     |
-| `pm_enforce_rules` | "Are any rules being violated?"                   |
+| Command              | What It Does                                     |
+| -------------------- | ------------------------------------------------ |
+| `pm status`          | "What's the current project state?"               |
+| `pm blockers`        | "What's blocking me?"                             |
+| `pm log`             | "Log a decision with body and links"              |
+| `pm note`            | "Quick capture with tags and links"               |
+| `pm scope`           | "Can we add this to the sprint?"                  |
+| `pm standup`         | "What did I do yesterday?"                        |
+| `pm rules`           | "List, add, or manage enforcement rules"          |
+| `pm search`          | "Full-text search across code and docs"           |
+| `pm arch`            | "Show architecture overview"                      |
+| `pm scan`            | "Index file registry, deps, and architecture"     |
+| `pm depends`         | "Show dependency graph for a file"                |
+| `pm impact`          | "Analyze what breaks if I change this file"       |
+| `pm files`           | "List indexed files by type"                      |
+| `pm understand`      | "Deep semantic analysis of the codebase"          |
 
 ---
 
@@ -618,22 +406,22 @@ trigger = "about to make a significant decision"  # ✗ won't work
 │                     │  Thinks, plans, │                      │
 │                     │  writes, decides│                      │
 │                     └────────┬────────┘                      │
-│                              │ MCP (stdio/sse)                │
+│                              │ CLI / hooks                    │
 │                              ▼                                │
 │              ┌───────────────────────────────┐               │
-│              │      PM Agent MCP Server       │               │
+│              │       PM Agent CLI + Hooks      │               │
 │              │  ┌─────────────────────────┐   │               │
 │              │  │  Memory Layer (SQLite)  │   │               │
 │              │  │  • project graph        │   │               │
-│              │  │  • decision log           │   │               │
-│              │  │  • temporal notes         │   │               │
-│              │  │  • task state             │   │               │
+│              │  │  • decision log         │   │               │
+│              │  │  • temporal notes       │   │               │
+│              │  │  • task state           │   │               │
 │              │  └─────────────────────────┘   │               │
 │              │  ┌─────────────────────────┐   │               │
 │              │  │  Rules Engine (TOML)    │   │               │
-│              │  │  • enforceable guardrails │   │               │
-│              │  │  • trigger → condition    │   │               │
-│              │  │    → action               │   │               │
+│              │  │  • enforceable guardrails│   │               │
+│              │  │  • trigger → condition   │   │               │
+│              │  │    → action              │   │               │
 │              │  └─────────────────────────┘   │               │
 │              │  ┌─────────────────────────┐   │               │
 │              │  │  Integrations (APIs)    │   │               │
@@ -654,9 +442,8 @@ trigger = "about to make a significant decision"  # ✗ won't work
 
 ### Tech Stack
 
-- **MCP Server**: Node.js (`@modelcontextprotocol/sdk`, `better-sqlite3`)
 - **CLI**: Node.js (Commander.js, Inquirer.js, Chalk, Ora)
-- **State**: SQLite (local-first, `better-sqlite3`)
+- **State**: SQLite (local-first, `sql.js`, WASM)
 - **Rules**: TOML (human-readable, version-controllable)
 - **Package Manager**: npm workspaces (monorepo)
 
@@ -672,7 +459,7 @@ All rules live in a single file (`.pm-agent/rules.toml`). A `scope` field tells 
 
 | `scope` | Applied when                                   | Example                                   |
 | ------- | ---------------------------------------------- | ----------------------------------------- |
-| `pm`    | CLI commands (`pm log`, `pm scope`), MCP tools | "Must log decision before closing ticket" |
+| `pm`    | CLI commands (`pm log`, `pm scope`, `pm rules`) | "Must log decision before closing ticket" |
 | `code`  | File save, commit, PR (IDE hooks)              | "No `any` types in shared packages"       |
 | `all`   | Everywhere                                     | "Surface blockers before standup"         |
 
@@ -687,7 +474,7 @@ Same engine, same parser, same evaluator — one source of truth for everything.
 ```toml
 # .pm-agent/rules.toml
 
-# ── PM discipline (checked by CLI + MCP) ──
+# ── PM discipline (checked by CLI + hooks) ──
 
 [[rule]]
 scope = "pm"
@@ -793,7 +580,7 @@ pm rules remove "stale-pr"
 
 #### 3. Let your AI propose them
 
-Your AI agent can call the MCP tool `pm_add_rule` to suggest a rule:
+Your AI agent can suggest a rule via the CLI:
 
 ```
 You: "I keep accidentally pushing console.log to production"
@@ -808,7 +595,8 @@ condition = "file.contains('console.log')"
 action = "suggest: 'Remove console.log before committing.'"
 severity = "soft"
 
-Add this rule? [Y/n]"
+Run this to add it:
+  pm rules add "no-console-log" --scope code --trigger "file.saved" --condition "file.contains('console.log')" --action "suggest: 'Remove console.log before committing.'" --severity soft"
 ```
 
 ### Trigger Matching
@@ -893,8 +681,8 @@ Everything is **automatically linked**. Ask "what's related to AUTH-91?" and get
 - [x] Rules engine (TOML config, enforceable guardrails)
 - [x] GitHub integration (PRs, issues, reviews)
 - [x] Linear integration (tickets, sprints)
-- [x] MCP server (stdio transport)
 - [x] CLI interface
+- [x] Claude Code hooks (session-start, pre-tool-use)
 - [ ] Jira integration
 - [ ] Slack integration (decision detection, blocker alerts)
 - [ ] Notion integration (doc linking)

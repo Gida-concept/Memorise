@@ -160,7 +160,7 @@ export function evaluateRule(rule: Rule, context: Record<string, unknown>): Rule
 
 /**
  * Evaluate rules against a context object without loading config from disk.
- * Used by: MCP server auto-enforcement AND Claude Code PreToolUse hook.
+ * Used by: CLI auto-enforcement AND Claude Code PreToolUse hook.
  * This is a pure function that takes pre-loaded rules and a context object.
  *
  * Returns a lightweight result with blocked flag and warnings list.

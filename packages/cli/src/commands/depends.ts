@@ -3,7 +3,7 @@ import { getCommandContext, closeCommandContext, outputJson, shouldOutputJson } 
 import { Colors } from '../formatters.js';
 
 export async function dependsCommand(filePath: string, opts: Record<string, any>): Promise<void> {
-  const ctx = getCommandContext(opts);
+  const ctx = await getCommandContext(opts);
 
   try {
     const depth = opts.depth || 1;

@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { DbWrapper } from '../db.js';
 
 export interface ScopeSnapshot {
   id: number;
@@ -10,7 +10,7 @@ export interface ScopeSnapshot {
 }
 
 export function captureScope(
-  db: Database.Database,
+  db: DbWrapper,
   data: { sprint_name: string; committed_days?: number; remaining_days?: number; risk?: 'LOW' | 'MEDIUM' | 'HIGH' },
 ): ScopeSnapshot {
   const remaining = data.remaining_days ?? 0;
@@ -34,11 +34,11 @@ export function captureScope(
   return db.prepare('SELECT * FROM scope_snapshots WHERE id = ?').get(result.lastInsertRowid) as ScopeSnapshot;
 }
 
-export function getLatestScope(db: Database.Database): ScopeSnapshot | undefined {
+export function getLatestScope(db: DbWrapper): ScopeSnapshot | undefined {
   return db.prepare('SELECT * FROM scope_snapshots ORDER BY id DESC LIMIT 1').get() as ScopeSnapshot | undefined;
 }
 
-export function getScopeHistory(db: Database.Database, sprintName?: string): ScopeSnapshot[] {
+export function getScopeHistory(db: DbWrapper, sprintName?: string): ScopeSnapshot[] {
   let sql = 'SELECT * FROM scope_snapshots';
   const params: any[] = [];
 

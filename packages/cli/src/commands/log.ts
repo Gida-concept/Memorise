@@ -6,7 +6,7 @@ import { PmCliError } from '../errors.js';
 import { confirmPrompt } from '../prompts.js';
 
 export async function logCommand(title: string, opts: Record<string, any>): Promise<void> {
-  const ctx = getCommandContext(opts);
+  const ctx = await getCommandContext(opts);
 
   try {
     // Build links from --link and --ticket options

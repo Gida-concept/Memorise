@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { DbWrapper } from '../db.js';
 import { generateId } from '../db.js';
 import { safeParseJson } from '../utils/json.js';
 
@@ -28,7 +28,7 @@ function parseTask(row: any): Task {
 }
 
 export function createTask(
-  db: Database.Database,
+  db: DbWrapper,
   data: { title: string; owner?: string; links?: string[] },
 ): Task {
   const id = generateId(db, 'TASK');
@@ -40,12 +40,12 @@ export function createTask(
   return getTask(db, id)!;
 }
 
-export function getTask(db: Database.Database, id: string): Task | undefined {
+export function getTask(db: DbWrapper, id: string): Task | undefined {
   const row = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as any;
   return row ? parseTask(row) : undefined;
 }
 
-export function updateTaskStatus(db: Database.Database, id: string, newStatus: TaskStatus): void {
+export function updateTaskStatus(db: DbWrapper, id: string, newStatus: TaskStatus): void {
   const task = getTask(db, id);
   if (!task) throw new Error(`Task ${id} not found`);
 
@@ -59,12 +59,12 @@ export function updateTaskStatus(db: Database.Database, id: string, newStatus: T
   db.prepare('UPDATE tasks SET status = ? WHERE id = ?').run(newStatus, id);
 }
 
-export function getBlockedTasks(db: Database.Database): Task[] {
+export function getBlockedTasks(db: DbWrapper): Task[] {
   return (db.prepare("SELECT * FROM tasks WHERE status = 'blocked' ORDER BY created_at DESC").all() as any[]).map(parseTask);
 }
 
 export function listTasks(
-  db: Database.Database,
+  db: DbWrapper,
   opts?: { status?: TaskStatus; owner?: string },
 ): Task[] {
   let sql = 'SELECT * FROM tasks WHERE 1=1';

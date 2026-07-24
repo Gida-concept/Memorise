@@ -23,7 +23,7 @@ cd your-project
 npx -y @gida-concept/pm-agent-cli init
 ```
 
-This works anywhere — your shell has the native build tools needed by `better-sqlite3`.
+This works anywhere with Node.js — `sql.js` runs in pure JavaScript via WebAssembly, no native compilation needed.
 
 ### From inside a coding CLI (Claude Code, Cursor, etc.)
 

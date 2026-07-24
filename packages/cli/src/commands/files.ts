@@ -3,7 +3,7 @@ import { Colors, formatTable } from '../formatters.js';
 import { glob } from 'glob';
 
 export async function filesCommand(opts: Record<string, any>): Promise<void> {
-  const ctx = getCommandContext(opts);
+  const ctx = await getCommandContext(opts);
 
   try {
     let indexedFiles = ctx.db.prepare('SELECT path, type, size, hash, last_indexed_at FROM file_registry ORDER BY path').all() as any[];

@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { Database } from '../db.js';
 
 /**
  * SqliteError shape from better-sqlite3.
@@ -53,7 +53,7 @@ function isContentionError(err: unknown): boolean {
  * ```
  */
 export function withWriteRetry<T>(
-  db: Database.Database,
+  db: Database,
   fn: () => T,
   options: RetryOptions = {},
 ): T {
@@ -104,7 +104,7 @@ export function withWriteRetry<T>(
  * the retry function to be awaited in an async call chain.
  */
 export async function withWriteRetryAsync<T>(
-  db: Database.Database,
+  db: Database,
   fn: () => T,
   options: RetryOptions = {},
 ): Promise<T> {

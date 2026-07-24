@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { DbWrapper } from '../db.js';
 import { walkProject, hashFile, parseGitignore, type FileEntry, type FileType } from './file-registry.js';
 import { findImports, findCircularDependencies, storeDependencyEdges, clearEdgesForFiles } from './dependency-mapper.js';
 import { detectEntryPoints, detectFramework, detectRole, storeArchitecture } from './architecture-detector.js';
@@ -40,7 +40,7 @@ function now(): string {
  * detects architecture, indexes docs.
  */
 export async function scan(
-  db: Database.Database,
+  db: DbWrapper,
   root: string,
   opts?: ScanOptions,
 ): Promise<ScanResult> {
@@ -132,7 +132,7 @@ export async function scan(
 /**
  * Index a doc file for FTS5 search.
  */
-function indexDocFile(db: Database.Database, root: string, relativePath: string): void {
+function indexDocFile(db: DbWrapper, root: string, relativePath: string): void {
   try {
     const absolutePath = path.join(root, relativePath);
     const content = fs.readFileSync(absolutePath, 'utf-8');
@@ -159,7 +159,7 @@ function indexDocFile(db: Database.Database, root: string, relativePath: string)
  * Incremental scan. Only processes files whose hash has changed.
  */
 export async function scanIncremental(
-  db: Database.Database,
+  db: DbWrapper,
   root: string,
   opts?: ScanOptions,
 ): Promise<ScanResult> {
@@ -275,7 +275,7 @@ export async function scanIncremental(
  * Verify mode. Compares file count on disk vs rows in file_registry.
  */
 export async function verify(
-  db: Database.Database,
+  db: DbWrapper,
   root: string,
 ): Promise<{
   indexed_matching: number;
@@ -336,7 +336,7 @@ export async function verify(
  * Also stores per-file summaries in the file_summaries table.
  */
 export async function semanticScan(
-  db: Database.Database,
+  db: DbWrapper,
   root: string,
 ): Promise<{ summaryCount: number; projectMap: ProjectSemanticMap }> {
   // Get registry from DB

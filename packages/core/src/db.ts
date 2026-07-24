@@ -1,6 +1,9 @@
-import Database from 'better-sqlite3';
+import initSqlJs, { Database as SqlJsDatabase } from 'sql.js';
+import type { SqlJsStatic } from 'sql.js';
 import path from 'path';
 import fs from 'fs';
+
+// ---- Config ----
 
 export interface DbConfig {
   path: string;
@@ -8,9 +11,136 @@ export interface DbConfig {
   readonly?: boolean;
 }
 
+// ---- Result types ----
+
+export interface RunResult {
+  changes: number;
+  lastInsertRowid: number;
+}
+
+// ---- Statement wrapper ----
+// Mimics the better-sqlite3 Statement API so existing code works unchanged.
+
+export class Statement {
+  private db: SqlJsDatabase;
+  private sql: string;
+
+  constructor(db: SqlJsDatabase, sql: string) {
+    this.db = db;
+    this.sql = sql;
+  }
+
+  run(...params: unknown[]): RunResult {
+    const bindParams = params.length > 0 ? params : undefined;
+    this.db.run(this.sql, bindParams as any);
+    const changes = this.db.getRowsModified();
+    const isInsert = /^\s*INSERT\s/i.test(this.sql);
+    let lastInsertRowid = 0;
+    if (isInsert) {
+      try {
+        const result = this.db.exec('SELECT last_insert_rowid() as id');
+        if (result.length > 0 && result[0]!.values.length > 0) {
+          lastInsertRowid = Number(result[0]!.values[0]![0]);
+        }
+      } catch {
+        // last_insert_rowid not available
+      }
+    }
+    return { changes, lastInsertRowid };
+  }
+
+  get(...params: unknown[]): any | undefined {
+    const stmt = this.db.prepare(this.sql);
+    stmt.bind(params as any);
+    const row = stmt.step() ? stmt.getAsObject() : undefined;
+    stmt.free();
+    return row;
+  }
+
+  all(...params: unknown[]): any[] {
+    const stmt = this.db.prepare(this.sql);
+    stmt.bind(params as any);
+    const rows: any[] = [];
+    while (stmt.step()) {
+      rows.push(stmt.getAsObject());
+    }
+    stmt.free();
+    return rows;
+  }
+}
+
+// ---- Database wrapper ----
+// Wraps a sql.js Database and exposes a better-sqlite3-compatible API.
+
+export class DbWrapper {
+  private db: SqlJsDatabase;
+  private filePath: string | null;
+
+  constructor(db: SqlJsDatabase, filePath: string | null = null) {
+    this.db = db;
+    this.filePath = filePath;
+  }
+
+  exec(sql: string): void {
+    this.db.exec(sql);
+  }
+
+  prepare(sql: string): Statement {
+    return new Statement(this.db, sql);
+  }
+
+  close(): void {
+    // Persist to disk before closing if we have a file path
+    if (this.filePath) {
+      try {
+        const data = this.db.export();
+        const buffer = Buffer.from(data);
+        fs.writeFileSync(this.filePath, buffer);
+      } catch {
+        // Best-effort save on close
+      }
+    }
+    this.db.close();
+  }
+
+  /**
+   * Save the database to disk immediately.
+   */
+  save(): void {
+    if (this.filePath) {
+      const data = this.db.export();
+      const buffer = Buffer.from(data);
+      fs.writeFileSync(this.filePath, buffer);
+    }
+  }
+
+  /**
+   * Run a callback inside a SQL transaction (BEGIN/COMMIT).
+   * Mimics the better-sqlite3 transaction API so existing scanner code works unchanged.
+   */
+  transaction<T>(fn: () => T): () => T {
+    return () => {
+      this.db.exec('BEGIN');
+      try {
+        const result = fn();
+        this.db.exec('COMMIT');
+        return result;
+      } catch (err) {
+        this.db.exec('ROLLBACK');
+        throw err;
+      }
+    };
+  }
+}
+
+/** Type alias for backward compatibility. Use DbWrapper for new code. */
+export type Database = DbWrapper;
+
+// ---- Migrations ----
+
 interface Migration {
   name: string;
-  up: (db: Database.Database) => void;
+  up: (db: DbWrapper) => void;
 }
 
 const migrations: Migration[] = [
@@ -163,7 +293,18 @@ const migrations: Migration[] = [
   },
 ];
 
-export function openDb(config: DbConfig): Database.Database {
+// ---- Open / Migrate / Close ----
+
+let sqlJsInitPromise: Promise<SqlJsStatic> | null = null;
+
+async function ensureSqlJs(): Promise<SqlJsStatic> {
+  if (!sqlJsInitPromise) {
+    sqlJsInitPromise = initSqlJs();
+  }
+  return sqlJsInitPromise;
+}
+
+export async function openDb(config: DbConfig): Promise<DbWrapper> {
   if (!config.memory) {
     const dir = path.dirname(config.path);
     if (!fs.existsSync(dir)) {
@@ -171,36 +312,47 @@ export function openDb(config: DbConfig): Database.Database {
     }
   }
 
-  let db: Database.Database;
+  const SQL = await ensureSqlJs();
+  let db: SqlJsDatabase;
+
   try {
-    db = new Database(config.memory ? ':memory:' : config.path, {
-      readonly: config.readonly ?? false,
-    });
+    if (config.memory) {
+      db = new SQL.Database();
+    } else if (fs.existsSync(config.path)) {
+      const buffer = fs.readFileSync(config.path);
+      db = new SQL.Database(buffer);
+    } else {
+      db = new SQL.Database();
+    }
   } catch (err) {
-    // Wrap better-sqlite3 errors with a more helpful message
     const msg = String(err);
-    if (msg.includes('cannot find module') || msg.includes('better-sqlite3') || msg.includes('node-gyp') || msg.includes('napi')) {
+    if (
+      msg.includes('cannot find module') ||
+      msg.includes('sql.js') ||
+      msg.includes('wasm') ||
+      msg.includes('WebAssembly')
+    ) {
       throw new Error(
-        `Failed to load native SQLite module (better-sqlite3).\n` +
-        `This usually happens when running from npx cache.\n` +
-        `Fix: Install the package locally first:\n\n` +
-        `  npm install -D @gida-concept/pm-agent-cli\n` +
-        `  npx pm init\n`
+        `Failed to initialize sql.js database.\n` +
+        `Fix: Make sure sql.js is installed:\n\n` +
+        `  npm install @gida-concept/pm-agent-core\n`
       );
     }
     throw err;
   }
 
-  db.pragma('journal_mode = WAL');
-  db.pragma('busy_timeout = 5000');
-  db.pragma('foreign_keys = ON');
+  // Apply PRAGMAs
+  db.run('PRAGMA journal_mode = WAL');
+  db.run('PRAGMA busy_timeout = 5000');
+  db.run('PRAGMA foreign_keys = ON');
 
-  migrate(db);
+  const wrapper = new DbWrapper(db, config.memory ? null : config.path);
+  migrate(wrapper);
 
-  return db;
+  return wrapper;
 }
 
-export function migrate(db: Database.Database): void {
+export function migrate(db: DbWrapper): void {
   db.exec(`CREATE TABLE IF NOT EXISTS _migrations (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
@@ -213,21 +365,26 @@ export function migrate(db: Database.Database): void {
 
   for (const migration of migrations) {
     if (!applied.has(migration.name)) {
-      db.transaction(() => {
+      db.exec('BEGIN');
+      try {
         migration.up(db);
         db.prepare('INSERT INTO _migrations (name) VALUES (?)').run(migration.name);
-      })();
+        db.exec('COMMIT');
+      } catch (err) {
+        db.exec('ROLLBACK');
+        throw err;
+      }
     }
   }
 }
 
-export function closeDb(db: Database.Database): void {
+export function closeDb(db: DbWrapper): void {
   db.close();
 }
 
 type IdPrefix = 'ADR' | 'BLK' | 'NOTE' | 'TASK';
 
-export function generateId(db: Database.Database, prefix: IdPrefix): string {
+export function generateId(db: DbWrapper, prefix: IdPrefix): string {
   const tableMap: Record<IdPrefix, string> = {
     ADR: 'decisions',
     BLK: 'blockers',

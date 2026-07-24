@@ -45,17 +45,15 @@ export async function initCommand(opts: Record<string, any>): Promise<void> {
     // Create the database
     let db;
     try {
-      db = openDb({ path: dbPath });
+      db = await openDb({ path: dbPath });
     } catch (err) {
       spinner.fail('Failed to create database');
-      const isNative = String(err).includes('better-sqlite3') || String(err).includes('node-gyp') || String(err).includes('native');
+      const isNative = String(err).includes('sql.js') || String(err).includes('wasm') || String(err).includes('WebAssembly');
       if (isNative) {
-        console.error('\n  The SQLite native module failed to compile from npx cache.');
+        console.error('\n  The sql.js module failed to initialize.');
         console.error('  Fix: install locally first:\n');
         console.error('    npm install -D @gida-concept/pm-agent-cli');
         console.error('    npx pm init\n');
-        console.error('  Or use --no-package-lock if you hit an ECOMPROMISED error:\n');
-        console.error('    npx --no-package-lock -y @gida-concept/pm-agent-cli init');
       }
       throw new PmCliError(`Database initialization failed: ${err}`, ExitCode.CONFIG_ERROR);
     }
@@ -138,24 +136,22 @@ export async function initCommand(opts: Record<string, any>): Promise<void> {
           '3. **TRACK** — Log significant decisions with rationale',
           '4. **NOTE** — Capture observations, context, and open questions',
           '',
-          '## Available Tools',
+          '## Available Commands',
           '',
-          'If PM Agent MCP is connected, use these tools:',
+          'Use the CLI via `! pm <command>`:',
           '',
-          '| Purpose | Tool |',
-          '|---------|------|',
-          '| Project snapshot | `pm_get_context` — decisions, blockers, notes, scope, architecture',
-          '| Blockers | `pm_get_blockers` — active and resolved blockers',
-          '| Decisions | `pm_log_decision` — log an ADR with body and links',
-          '| Notes | `pm_log_note` — quick capture with tags',
-          '| Scope | `pm_check_scope` — sprint impact and risk assessment',
-          '| Rules | `pm_enforce_rules` — evaluate rules against any context',
-          '| Scan | `pm_scan_codebase` — index file registry, deps, architecture',
-          '| Search | `pm_search_codebase` — full-text across code and docs',
-          '| Architecture | `pm_get_architecture` — entry points, layers, frameworks',
-          '| Analysis | `pm_understand_codebase` — deep semantic analysis',
-          '',
-          'Without MCP, use the CLI via `! pm <command>`.',
+          '| Purpose | Command |',
+          '|---------|---------|',
+          '| Project snapshot | `pm status` — decisions, blockers, notes, scope, architecture',
+          '| Blockers | `pm blockers` — active and resolved blockers',
+          '| Decisions | `pm log` — log an ADR with body and links',
+          '| Notes | `pm note` — quick capture with tags',
+          '| Scope | `pm scope` — sprint impact and risk assessment',
+          '| Rules | `pm rules` — evaluate rules against any context',
+          '| Scan | `pm scan` — index file registry, deps, architecture',
+          '| Search | `pm search` — full-text across code and docs',
+          '| Architecture | `pm arch` — entry points, layers, frameworks',
+          '| Analysis | `pm understand` — deep semantic analysis',
           '',
           '## Core Principles',
           '',
@@ -171,43 +167,6 @@ export async function initCommand(opts: Record<string, any>): Promise<void> {
       // CLAUDE.md creation is best-effort
     }
 
-    // Write .mcp.json for MCP server integration (per-project, local install)
-    try {
-      const mcpConfigPath = path.join(projectRoot, '.mcp.json');
-      if (!fs.existsSync(mcpConfigPath) || opts.force) {
-        let mcpConfig: Record<string, unknown> = {};
-        if (fs.existsSync(mcpConfigPath)) {
-          try {
-            mcpConfig = JSON.parse(fs.readFileSync(mcpConfigPath, 'utf-8'));
-          } catch { /* corrupt, overwrite */ }
-        }
-        mcpConfig.mcpServers = mcpConfig.mcpServers || {};
-        // Only add if not already configured
-        if (!(mcpConfig.mcpServers as Record<string, unknown>)['pm-agent']) {
-          // Try to find the MCP server binary in local node_modules
-          const localMcpPath = path.join(projectRoot, 'node_modules', '@gida-concept', 'pm-agent-mcp-server', 'dist', 'index.js');
-          const hasLocalInstall = fs.existsSync(localMcpPath);
-
-          if (hasLocalInstall) {
-            // Point at local install — survives offline, no npx
-            (mcpConfig.mcpServers as Record<string, unknown>)['pm-agent'] = {
-              command: 'node',
-              args: [localMcpPath],
-            };
-          } else {
-            // No local install — use npx (user can run npm install later)
-            (mcpConfig.mcpServers as Record<string, unknown>)['pm-agent'] = {
-              command: 'npx',
-              args: ['-y', '@gida-concept/pm-agent-mcp-server'],
-            };
-          }
-          fs.writeFileSync(mcpConfigPath, JSON.stringify(mcpConfig, null, 2) + '\n', 'utf-8');
-        }
-      }
-    } catch {
-      // .mcp.json creation is best-effort
-    }
-
     // Auto-install hooks into .claude/hooks/
     try {
       spinner.text = 'Installing PM Agent hooks...';
@@ -219,7 +178,7 @@ export async function initCommand(opts: Record<string, any>): Promise<void> {
 
     // Check if project appears empty and offer scaffolding
     try {
-      const db = openDb({ path: dbPath });
+      const db = await openDb({ path: dbPath });
       const registry = db.prepare('SELECT COUNT(*) as count FROM file_registry').get() as { count: number };
       closeDb(db);
 
@@ -322,7 +281,6 @@ export async function initCommand(opts: Record<string, any>): Promise<void> {
     console.log(Colors.success(`Database:  ${dbPath}`));
     console.log(Colors.success(`Rules:     ${rulesPath}`));
     console.log(Colors.success(`CLAUDE.md: ${path.join(projectRoot, 'CLAUDE.md')}`));
-    console.log(Colors.success(`MCP:       ${path.join(projectRoot, '.mcp.json')}`));
     console.log(Colors.info('\nRun `pm --help` to see available commands.'));
 
   } catch (err) {

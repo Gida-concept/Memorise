@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { DbWrapper } from '../db.js';
 import type { PmAgentConfig } from '../config.js';
 import { GitHubIntegration } from './github.js';
 import { LinearIntegration } from './linear.js';
@@ -43,7 +43,7 @@ export async function detectIntegrations(config: PmAgentConfig): Promise<Integra
  * Sync all configured integrations — detects, connects, fetches blockers/decisions/tasks.
  */
 export async function syncAllIntegrations(
-  db: Database.Database,
+  db: DbWrapper,
   config: PmAgentConfig,
 ): Promise<SyncResult> {
   const result: SyncResult = { integrations: [] };

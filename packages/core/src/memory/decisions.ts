@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { DbWrapper } from '../db.js';
 import { generateId } from '../db.js';
 import { safeParseJson } from '../utils/json.js';
 
@@ -20,7 +20,7 @@ function parseDecision(row: any): Decision {
 }
 
 export function createDecision(
-  db: Database.Database,
+  db: DbWrapper,
   data: { title: string; body?: string; author?: string; links?: string[] },
 ): Decision {
   if (!data.title || data.title.trim() === '') {
@@ -40,13 +40,13 @@ export function createDecision(
   return getDecision(db, id)!;
 }
 
-export function getDecision(db: Database.Database, id: string): Decision | undefined {
+export function getDecision(db: DbWrapper, id: string): Decision | undefined {
   const row = db.prepare('SELECT * FROM decisions WHERE id = ?').get(id) as any;
   return row ? parseDecision(row) : undefined;
 }
 
 export function listDecisions(
-  db: Database.Database,
+  db: DbWrapper,
   opts?: { limit?: number; since?: string; author?: string },
 ): Decision[] {
   let sql = 'SELECT * FROM decisions WHERE 1=1';
@@ -72,7 +72,7 @@ export function listDecisions(
 }
 
 export function linkEntityToDecision(
-  db: Database.Database,
+  db: DbWrapper,
   decisionId: string,
   entityId: string,
 ): void {

@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { DbWrapper } from '../db.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -120,7 +120,7 @@ export async function findImports(root: string, filePaths: string[]): Promise<De
 /**
  * Find circular dependencies using BFS from dependency_edges table.
  */
-export async function findCircularDependencies(db: Database.Database): Promise<string[][]> {
+export async function findCircularDependencies(db: DbWrapper): Promise<string[][]> {
   const edges = db.prepare('SELECT source_path, target_path FROM dependency_edges').all() as { source_path: string; target_path: string }[];
 
   // Build adjacency list (reverse direction for DFS)
@@ -175,7 +175,7 @@ export async function findCircularDependencies(db: Database.Database): Promise<s
 /**
  * Store dependency edges in the database (batch insert/replace).
  */
-export function storeDependencyEdges(db: Database.Database, edges: DependencyEdge[]): void {
+export function storeDependencyEdges(db: DbWrapper, edges: DependencyEdge[]): void {
   const insert = db.prepare(`
     INSERT OR REPLACE INTO dependency_edges (source_path, target_path, import_type)
     VALUES (?, ?, ?)
@@ -199,7 +199,7 @@ export function storeDependencyEdges(db: Database.Database, edges: DependencyEdg
  * Returns a deduplicated array of file paths at depths 2+ (direct deps excluded).
  */
 export function getTransitiveDependencies(
-  db: Database.Database,
+  db: DbWrapper,
   filePath: string,
   opts: { depth?: number; reverse?: boolean },
 ): string[] {
@@ -236,7 +236,7 @@ export function getTransitiveDependencies(
 /**
  * Clear old dependency edges for a set of files (for incremental updates).
  */
-export function clearEdgesForFiles(db: Database.Database, filePaths: string[]): void {
+export function clearEdgesForFiles(db: DbWrapper, filePaths: string[]): void {
   if (filePaths.length === 0) return;
 
   const deleteStmt = db.prepare('DELETE FROM dependency_edges WHERE source_path = ?');

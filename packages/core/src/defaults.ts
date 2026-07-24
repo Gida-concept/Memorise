@@ -52,9 +52,9 @@ export const DEFAULT_RULES_TOML: string = `# ── PM Agent Default Rules ─�
 # Rules enforce PM discipline and coding standards.
 # Severity: hard (blocks), soft (confirm), info (notify)
 #
-# Auto-enforcement is active on every tool call.
+# Auto-enforcement is active on every CLI command and hook invocation.
 # Available context variables:
-#   tool_name   — the MCP tool being called (e.g. "pm_log_decision")
+#   tool_name   — the command being called (e.g. "log")
 #   operation   — inferred operation: read / log / add / scan / enforce / ...
 #   entity      — inferred target: context / decision / note / rule / ...
 #   tool_args   — the full arguments object passed to the tool

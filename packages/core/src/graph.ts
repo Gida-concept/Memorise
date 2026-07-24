@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { DbWrapper } from './db.js';
 import { safeParseJson } from './utils/json.js';
 import type { Decision } from './memory/decisions.js';
 import type { Blocker } from './memory/blockers.js';
@@ -12,7 +12,7 @@ export interface RelatedEntities {
   tasks: Array<Pick<Task, 'id' | 'title' | 'status' | 'owner'>>;
 }
 
-export function getRelatedEntities(db: Database.Database, entityId: string): RelatedEntities {
+export function getRelatedEntities(db: DbWrapper, entityId: string): RelatedEntities {
   const likePattern = `%"${entityId}"%`;
 
   const decisions = (db.prepare(
@@ -35,7 +35,7 @@ export function getRelatedEntities(db: Database.Database, entityId: string): Rel
 }
 
 export function expandGraph(
-  db: Database.Database,
+  db: DbWrapper,
   entityId: string,
   opts?: { depth?: number },
 ): Record<string, unknown> {
@@ -70,7 +70,7 @@ export function expandGraph(
 }
 
 export function getStandupData(
-  db: Database.Database,
+  db: DbWrapper,
   since?: string,
 ): {
   date: string;

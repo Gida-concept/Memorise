@@ -2,7 +2,7 @@ import { getCommandContext, closeCommandContext, outputJson, shouldOutputJson } 
 import { Colors } from '../formatters.js';
 
 export async function searchCommand(query: string, opts: Record<string, any>): Promise<void> {
-  const ctx = getCommandContext(opts);
+  const ctx = await getCommandContext(opts);
 
   try {
     const scope = opts.scope || 'all';

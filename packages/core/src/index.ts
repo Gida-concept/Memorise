@@ -1,5 +1,5 @@
 export { openDb, migrate, closeDb, generateId } from './db.js';
-export type { DbConfig } from './db.js';
+export type { DbConfig, Database } from './db.js';
 
 export { safeParseJson } from './utils/json.js';
 

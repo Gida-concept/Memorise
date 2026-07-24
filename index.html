@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <title>PM Agent — Project Context for AI Coding Assistants</title>
-  <meta name="description" content="PM Agent is an MCP server that gives your AI coding assistant structured project context — decisions, blockers, scope, and rules — so it works with full awareness, not just code." />
+  <meta name="description" content="PM Agent is a CLI tool + hooks that give your AI coding assistant structured project context — decisions, blockers, scope, and rules — so it works with full awareness, not just code." />
 
   <!-- Open Graph -->
   <meta property="og:title" content="PM Agent — Project Context for AI Coding Assistants" />
@@ -825,7 +825,7 @@
         <div class="hero-content">
           <div class="hero-badge reveal visible">
             <span class="dot"></span>
-            v0.2.6 &mdash; MCP Server
+            v0.2.6 &mdash; CLI + Hooks
           </div>
 
           <h1 class="reveal visible reveal-d1">
@@ -850,15 +850,15 @@
 
           <div class="hero-stats reveal visible reveal-d4">
             <div class="hero-stat">
-              <div class="hero-stat-num">12<span class="suffix">tools</span></div>
-              <div class="hero-stat-label">MCP endpoints</div>
+              <div class="hero-stat-num">14<span class="suffix">commands</span></div>
+              <div class="hero-stat-label">CLI tools</div>
             </div>
             <div class="hero-stat">
-              <div class="hero-stat-num">8<span class="suffix">clients</span></div>
-              <div class="hero-stat-label">Supported editors</div>
+              <div class="hero-stat-num">3<span class="suffix">hooks</span></div>
+              <div class="hero-stat-label">Auto-loaded context</div>
             </div>
             <div class="hero-stat hero-stat-full">
-              <div class="hero-stat-num">1<span class="suffix">config block</span></div>
+              <div class="hero-stat-num">0<span class="suffix">config edits</span></div>
               <div class="hero-stat-label">No accounts or API keys</div>
             </div>
           </div>
@@ -893,7 +893,7 @@
         <div class="reveal">
           <div class="section-tag">Features</div>
           <h2 class="section-heading">What your AI sees<br />when PM Agent is connected.</h2>
-          <p class="section-sub">Every tool follows the Model Context Protocol. Your assistant picks the right one&mdash;you just ask naturally.</p>
+          <p class="section-sub">Every command follows the PM Agent CLI. Your assistant picks the right one&mdash;you just ask naturally.</p>
         </div>
 
         <div class="features-grid reveal reveal-d1">
@@ -937,7 +937,7 @@
         <div class="reveal">
           <div class="section-tag">Setup</div>
           <h2 class="section-heading">One config block,<br />instant project awareness.</h2>
-          <p class="section-sub">No API keys, no accounts, no global installs. Add this to your MCP config and restart.</p>
+          <p class="section-sub">No API keys, no accounts. Install globally, run <code>pm init</code>, and your AI instantly sees project context.</p>
         </div>
 
         <div class="setup-wrap">
@@ -946,18 +946,23 @@
               <span class="term-dot"></span>
               <span class="term-dot"></span>
               <span class="term-dot"></span>
-              <span class="term-label">.mcp.json</span>
+              <span class="term-label">terminal</span>
             </div>
             <div class="code-body">
-              <span class="cm">// project-level config</span><br />
-              {<br />
-              &nbsp;&nbsp;<span class="kw">"mcpServers"</span>: {<br />
-              &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">"pm-agent"</span>: {<br />
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">"command"</span>: <span class="st">"npx"</span>,<br />
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">"args"</span>: [<span class="st">"-y"</span>, <span class="st">"@gida-concept/pm-agent-mcp-server"</span>]<br />
-              &nbsp;&nbsp;&nbsp;&nbsp;}<br />
-              &nbsp;&nbsp;}<br />
-              }
+              <span class="cm"># Install globally</span><br />
+              <span class="prompt">$</span> npm install -g @gida-concept/pm-agent-cli<br />
+              <br />
+              <span class="cm"># Initialize in your project</span><br />
+              <span class="prompt">$</span> cd your-project && pm init<br />
+              <span class="dim">│</span><br />
+              <span class="dim">│</span> <span class="out">Config:    .pm-agent/config.toml</span><br />
+              <span class="dim">│</span> <span class="out">Database:  .pm-agent/pm.db</span><br />
+              <span class="dim">│</span> <span class="out">Rules:     .pm-agent/rules.toml</span><br />
+              <span class="dim">│</span> <span class="out">CLAUDE.md: CLAUDE.md</span><br />
+              <br />
+              <span class="cm"># Check project state</span><br />
+              <span class="prompt">$</span> pm status<br />
+              <span class="dim">│</span> <span class="out">Found 2 blockers, 4 decisions, 3 active rules</span>
             </div>
           </div>
 
@@ -966,21 +971,21 @@
               <div class="step-num" aria-hidden="true">1</div>
               <div class="step-body">
                 <h3>Install</h3>
-                <p>Node.js v18+. Nothing to install&mdash;npx handles the download.</p>
+                <p>Node.js v18+. <code>npm install -g</code> globally, or use <code>npx @gida-concept/pm-agent-cli</code>.</p>
               </div>
             </div>
             <div class="step">
               <div class="step-num" aria-hidden="true">2</div>
               <div class="step-body">
-                <h3>Configure</h3>
-                <p>Drop the JSON snippet into your AI tool&#8217;s MCP config file.</p>
+                <h3>Init</h3>
+                <p>Run <code>pm init</code> in your project. Creates config, database, rules, and Claude Code hooks.</p>
               </div>
             </div>
             <div class="step">
               <div class="step-num" aria-hidden="true">3</div>
               <div class="step-body">
                 <h3>Restart</h3>
-                <p>MCP configs load on startup. Restart your editor or CLI session.</p>
+                <p>Restart your editor or CLI session. Claude Code hooks load automatically.</p>
               </div>
             </div>
             <div class="step">
@@ -999,59 +1004,67 @@
     <section id="tools">
       <div class="container">
         <div class="reveal">
-          <div class="section-tag">MCP Tools</div>
-          <h2 class="section-heading">Every tool your AI<br />needs to manage context.</h2>
-          <p class="section-sub">12 endpoints covering decisions, blockers, scope, rules, dependencies, and codebase scanning.</p>
+          <div class="section-tag">CLI Commands</div>
+          <h2 class="section-heading">Every command your AI<br />needs to manage context.</h2>
+          <p class="section-sub">14 commands covering decisions, blockers, scope, rules, dependencies, and codebase scanning.</p>
         </div>
 
         <div class="tools-grid reveal reveal-d1">
           <div class="t-item">
             <div class="t-i" aria-hidden="true">&#9432;</div>
-            <div class="t-desc"><strong>pm_get_context</strong><span>Project overview &mdash; blockers, decisions, scope</span></div>
+            <div class="t-desc"><strong>pm status</strong><span>Project overview &mdash; blockers, decisions, scope</span></div>
           </div>
           <div class="t-item">
             <div class="t-i" aria-hidden="true">&#9998;</div>
-            <div class="t-desc"><strong>pm_log_decision</strong><span>Record an architectural or process decision</span></div>
+            <div class="t-desc"><strong>pm log</strong><span>Record an architectural or process decision</span></div>
           </div>
           <div class="t-item">
             <div class="t-i" aria-hidden="true">&#9888;</div>
-            <div class="t-desc"><strong>pm_add_blocker</strong><span>Log a new blocker with description and severity</span></div>
-          </div>
-          <div class="t-item">
-            <div class="t-i" aria-hidden="true">&#10003;</div>
-            <div class="t-desc"><strong>pm_resolve_blocker</strong><span>Mark a blocker as resolved</span></div>
+            <div class="t-desc"><strong>pm blockers</strong><span>List and manage blockers</span></div>
           </div>
           <div class="t-item">
             <div class="t-i" aria-hidden="true">&#9997;</div>
-            <div class="t-desc"><strong>pm_add_note</strong><span>Save an observation or insight</span></div>
+            <div class="t-desc"><strong>pm note</strong><span>Quick capture an observation with tags</span></div>
           </div>
           <div class="t-item">
             <div class="t-i" aria-hidden="true">&#8999;</div>
-            <div class="t-desc"><strong>pm_scope_check</strong><span>Check feature fit against sprint capacity</span></div>
-          </div>
-          <div class="t-item">
-            <div class="t-i" aria-hidden="true">&#9881;</div>
-            <div class="t-desc"><strong>pm_add_rule</strong><span>Add a PM rule with hard or soft enforcement</span></div>
-          </div>
-          <div class="t-item">
-            <div class="t-i" aria-hidden="true">&#128269;</div>
-            <div class="t-desc"><strong>pm_scan_codebase</strong><span>Scan code affected by a decision or change</span></div>
-          </div>
-          <div class="t-item">
-            <div class="t-i" aria-hidden="true">&#9744;</div>
-            <div class="t-desc"><strong>pm_analyze_dependencies</strong><span>Map dependency chains between tasks and code</span></div>
-          </div>
-          <div class="t-item">
-            <div class="t-i" aria-hidden="true">&#128339;</div>
-            <div class="t-desc"><strong>pm_get_timeline</strong><span>Activity timeline for recent project changes</span></div>
+            <div class="t-desc"><strong>pm scope</strong><span>Check feature fit against sprint capacity</span></div>
           </div>
           <div class="t-item">
             <div class="t-i" aria-hidden="true">&#128203;</div>
-            <div class="t-desc"><strong>pm_get_rules</strong><span>List all active PM rules</span></div>
+            <div class="t-desc"><strong>pm rules</strong><span>List, add, and manage enforcement rules</span></div>
           </div>
           <div class="t-item">
-            <div class="t-i" aria-hidden="true">&#9878;</div>
-            <div class="t-desc"><strong>pm_check_rules</strong><span>Check a proposed action against active rules</span></div>
+            <div class="t-i" aria-hidden="true">&#9881;</div>
+            <div class="t-desc"><strong>pm scan</strong><span>Scan codebase for file registry, deps, architecture</span></div>
+          </div>
+          <div class="t-item">
+            <div class="t-i" aria-hidden="true">&#128269;</div>
+            <div class="t-desc"><strong>pm search</strong><span>Full-text search across code and docs</span></div>
+          </div>
+          <div class="t-item">
+            <div class="t-i" aria-hidden="true">&#9744;</div>
+            <div class="t-desc"><strong>pm depends</strong><span>Show dependency graph for a file</span></div>
+          </div>
+          <div class="t-item">
+            <div class="t-i" aria-hidden="true">&#128339;</div>
+            <div class="t-desc"><strong>pm impact</strong><span>Analyze what breaks if you change a file</span></div>
+          </div>
+          <div class="t-item">
+            <div class="t-i" aria-hidden="true">&#128200;</div>
+            <div class="t-desc"><strong>pm arch</strong><span>Show architecture overview</span></div>
+          </div>
+          <div class="t-item">
+            <div class="t-i" aria-hidden="true">&#128196;</div>
+            <div class="t-desc"><strong>pm files</strong><span>List indexed files by type</span></div>
+          </div>
+          <div class="t-item">
+            <div class="t-i" aria-hidden="true">&#128083;</div>
+            <div class="t-desc"><strong>pm understand</strong><span>Deep semantic codebase analysis</span></div>
+          </div>
+          <div class="t-item">
+            <div class="t-i" aria-hidden="true">&#127919;</div>
+            <div class="t-desc"><strong>pm standup</strong><span>Daily standup summary</span></div>
           </div>
         </div>
       </div>
@@ -1063,41 +1076,41 @@
         <div class="reveal">
           <div class="section-tag">Integration</div>
           <h2 class="section-heading">Works with every major<br />AI coding tool.</h2>
-          <p class="section-sub">Standard MCP &mdash; one config format across all clients.</p>
+          <p class="section-sub">CLI works in any terminal. Claude Code hooks auto-load context.</p>
         </div>
 
         <div class="integ-grid reveal reveal-d1">
           <div class="i-card">
             <div class="i-icon" aria-hidden="true">&#128172;</div>
-            <div class="i-label"><strong>Claude Code</strong><span>.mcp.json / ~/.claude.json</span></div>
+            <div class="i-label"><strong>Claude Code</strong><span>Auto hooks via pm init</span></div>
           </div>
           <div class="i-card">
             <div class="i-icon" aria-hidden="true">&#129302;</div>
-            <div class="i-label"><strong>Cursor</strong><span>.cursor/mcp.json</span></div>
+            <div class="i-label"><strong>Cursor</strong><span>Use via ! pm commands</span></div>
           </div>
           <div class="i-card">
             <div class="i-icon" aria-hidden="true">&#128187;</div>
-            <div class="i-label"><strong>VS Code</strong><span>.vscode/mcp.json</span></div>
+            <div class="i-label"><strong>VS Code</strong><span>Use via ! pm commands</span></div>
           </div>
           <div class="i-card">
             <div class="i-icon" aria-hidden="true">&#9000;</div>
-            <div class="i-label"><strong>Zed</strong><span>settings.json</span></div>
+            <div class="i-label"><strong>Zed</strong><span>Use via ! pm commands</span></div>
           </div>
           <div class="i-card">
             <div class="i-icon" aria-hidden="true">&#9889;</div>
-            <div class="i-label"><strong>Continue.dev</strong><span>config.json / config.yaml</span></div>
+            <div class="i-label"><strong>Continue.dev</strong><span>Use via ! pm commands</span></div>
           </div>
           <div class="i-card">
             <div class="i-icon" aria-hidden="true">&#123;</div>
-            <div class="i-label"><strong>OpenCode</strong><span>opencode.json</span></div>
+            <div class="i-label"><strong>OpenCode</strong><span>Use via ! pm commands</span></div>
           </div>
           <div class="i-card">
             <div class="i-icon" aria-hidden="true">&#129302;</div>
-            <div class="i-label"><strong>Codex CLI</strong><span>codexrc.toml</span></div>
+            <div class="i-label"><strong>Codex CLI</strong><span>Use via ! pm commands</span></div>
           </div>
           <div class="i-card">
             <div class="i-icon" aria-hidden="true">&#9881;</div>
-            <div class="i-label"><strong>Any MCP Client</strong><span>Standard stdio MCP</span></div>
+            <div class="i-label"><strong>Any terminal</strong><span>pm commands work everywhere</span></div>
           </div>
         </div>
       </div>
@@ -1108,7 +1121,7 @@
       <div class="container">
         <div class="cta-box reveal">
           <h2>Give your AI the full picture.</h2>
-          <p>Drop in one config block, restart your editor, and your AI starts seeing project context. No API keys, no accounts, no setup tax.</p>
+          <p>Install globally, run <code>pm init</code>, and your AI starts seeing project context. No API keys, no accounts, no setup tax.</p>
           <div class="cta-actions">
             <a href="https://github.com/Gida-concept/Memorise" target="_blank" class="btn-primary">
               Get Started on GitHub &#8599;
