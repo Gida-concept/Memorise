@@ -809,6 +809,16 @@ function lockPath(dbPath: string): string {
   return dbPath + LOCK_DIR_SUFFIX;
 }
 
+/** Check whether a PID corresponds to a live process (signal 0). */
+function isPidAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function openDb(config: DbConfig): Promise<DbWrapper> {
   let low: Low<DbData>;
 
@@ -826,9 +836,31 @@ export async function openDb(config: DbConfig): Promise<DbWrapper> {
       try {
         await lockfile.lock(config.path, { ...LOCK_RETRY, lockfilePath: lock });
       } catch {
-        throw new Error(
-          `Could not acquire database lock for ${config.path}. Another PM Agent process may be active.`
-        );
+        // Lock acquisition failed — check if the owning process is still alive
+        let stale = false;
+        try {
+          if (fs.existsSync(lock)) {
+            const raw = fs.readFileSync(lock, 'utf-8').trim();
+            const pid = parseInt(raw.split('\n')[0]?.split(':')[0], 10);
+            if (pid && !isPidAlive(pid)) stale = true;
+          }
+        } catch { /* best-effort staleness check */ }
+
+        if (stale) {
+          // Orphaned lock from a crashed process — clean it and retry once
+          try { fs.rmSync(lock, { force: true, recursive: true }); } catch {}
+          try {
+            await lockfile.lock(config.path, { ...LOCK_RETRY, lockfilePath: lock });
+          } catch {
+            throw new Error(
+              `Could not acquire database lock for ${config.path}.`
+            );
+          }
+        } else {
+          throw new Error(
+            `Could not acquire database lock for ${config.path}. Another PM Agent process may be active.`
+          );
+        }
       }
     }
 
