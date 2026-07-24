@@ -58,6 +58,7 @@ export async function scan(
   db.exec('DELETE FROM dependency_edges');
   db.exec('DELETE FROM architecture_map');
   db.exec('DELETE FROM doc_index');
+  db.exec('DELETE FROM doc_fts');
 
   // Batch insert file registry
   const insertFile = db.prepare(`
@@ -82,6 +83,10 @@ export async function scan(
       opts.onProgress(Math.min(i + batchSize, entries.length), entries.length, 'Indexing files...');
     }
   }
+
+  // Rebuild FTS4 index from doc_index (sql.js WASM doesn't support external-content FTS)
+  db.exec('DELETE FROM doc_fts');
+  db.prepare("INSERT INTO doc_fts (path, title, content) SELECT path, title, content FROM doc_index").run();
 
   // Map dependencies (only source files)
   const sourceFiles = entries
@@ -213,6 +218,12 @@ export async function scanIncremental(
     db.prepare('DELETE FROM dependency_edges WHERE source_path = ? OR target_path = ?').run(filePath, filePath);
     db.prepare('DELETE FROM architecture_map WHERE path = ?').run(filePath);
     db.prepare('DELETE FROM doc_index WHERE path = ?').run(filePath);
+  }
+
+  // Rebuild FTS4 from doc_index after any changes
+  if (allChangedFiles.some(e => e.type === 'doc') || deletedFiles.length > 0) {
+    db.exec('DELETE FROM doc_fts');
+    db.prepare("INSERT INTO doc_fts (path, title, content) SELECT path, title, content FROM doc_index").run();
   }
 
   // Re-map dependencies for changed files

@@ -10,19 +10,18 @@ export async function searchCommand(query: string, opts: Record<string, any>): P
     const limit = opts.limit || 20;
     const results: Array<{ path: string; title: string | null; snippet: string; score: number }> = [];
 
-    // Search docs via FTS5
+    // Search docs via FTS4
     if (scope === 'all' || scope === 'docs') {
       try {
         const ftsResults = ctx.db.prepare(`
-          SELECT doc_index.path, doc_index.title, snippet(doc_fts, 1, '>>>', '<<<', '...', 32) as snippet_text
+          SELECT path, title, snippet(doc_fts, '<', '>', '...', -1, 32) as snippet_text
           FROM doc_fts
-          JOIN doc_index ON doc_index.rowid = doc_fts.rowid
           WHERE doc_fts MATCH ?
           LIMIT ?
         `).all(query, limit) as { path: string; title: string | null; snippet_text: string }[];
 
         for (const r of ftsResults) {
-          results.push({ path: r.path, title: r.title, snippet: r.snippet_text, score: 1.0 });
+          results.push({ path: r.path, title: r.title || null, snippet: r.snippet_text, score: 1.0 });
         }
       } catch {
         // FTS5 might not be available or syntax error — fall back to LIKE search
