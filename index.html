@@ -207,13 +207,18 @@
 
     .menu-toggle{
       display:flex;flex-direction:column;gap:5px;
-      width:28px;padding:4px 0;
+      width:32px;height:32px;padding:6px 5px;
+      align-items:center;justify-content:center;
       position:relative;z-index:110;
+      border-radius:var(--radius-sm);
+      margin-left:auto;
     }
+    .menu-toggle:active{background:rgba(255,255,255,0.05)}
     .menu-toggle span{
-      display:block;height:2px;border-radius:1px;
+      display:block;width:100%;height:2px;border-radius:1px;
       background:var(--text);transition:all 0.3s var(--ease);
       transform-origin:center;
+      flex-shrink:0;
     }
     .menu-toggle.open span:nth-child(1){
       transform:translateY(7px) rotate(45deg);
@@ -230,9 +235,9 @@
       background:rgba(8,8,10,0.97);
       backdrop-filter:blur(24px);
       -webkit-backdrop-filter:blur(24px);
-      display:flex;flex-direction:column;align-items:center;
-      gap:0.75rem;
-      padding:1.25rem 1rem 1.5rem;
+      display:flex;flex-direction:column;
+      gap:0;
+      padding:0.5rem 0 1rem;
       opacity:0;pointer-events:none;
       transition:opacity 0.3s var(--ease);
       z-index:105;
@@ -243,22 +248,24 @@
       opacity:1;pointer-events:auto;
     }
     .nav-menu a{
+      display:block;
       font-size:1rem;font-weight:500;
       color:var(--text-mid);
-      padding:0.5rem 0;
-      transition:color 0.2s;
+      padding:0.75rem 1.25rem;
+      transition:color 0.2s, background 0.2s;
+      border-radius:0;
     }
-    .nav-menu a:hover{color:var(--text)}
+    .nav-menu a:hover{color:var(--text);background:rgba(255,255,255,0.03)}
     .nav-menu .nav-cta{
-      margin-top:0.25rem;
-      padding:0.65rem 1.5rem;
+      margin:0.5rem 1.25rem 0;
+      padding:0.75rem 1.5rem;
       border-radius:var(--radius-md);
       background:var(--orange);
       color:#fff !important;
       font-weight:600;font-size:0.9rem;
       transition:background 0.2s, transform 0.2s;
       text-align:center;
-      width:100%;
+      width:auto;
     }
     .nav-menu .nav-cta:hover{
       background:var(--orange-bright);
