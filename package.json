@@ -1,6 +1,6 @@
 {
   "name": "pm-agent",
-  "version": "0.3.9",
+  "version": "0.3.10",
   "private": true,
   "publishConfig": {
     "access": "public"

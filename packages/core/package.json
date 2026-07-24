@@ -1,6 +1,6 @@
 {
   "name": "@gida-concept/pm-agent-core",
-  "version": "0.3.9",
+  "version": "0.3.10",
   "description": "PM Agent core — memory layer, rules engine, and codebase intelligence",
   "files": [
     "dist",
