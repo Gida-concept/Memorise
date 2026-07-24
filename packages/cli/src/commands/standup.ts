@@ -34,6 +34,6 @@ export async function standupCommand(opts: Record<string, any>): Promise<void> {
       console.log('');
     }
   } finally {
-    closeCommandContext(ctx);
+    await closeCommandContext(ctx);
   }
 }

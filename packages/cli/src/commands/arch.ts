@@ -58,6 +58,6 @@ export async function archCommand(opts: Record<string, any>): Promise<void> {
       console.log(`\n  ${Colors.muted(`Total: ${entries.length} indexed files`)}`);
     }
   } finally {
-    closeCommandContext(ctx);
+    await closeCommandContext(ctx);
   }
 }

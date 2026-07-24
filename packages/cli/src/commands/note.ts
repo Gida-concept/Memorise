@@ -21,6 +21,6 @@ export async function noteCommand(content: string, opts: Record<string, any>): P
       }
     }
   } finally {
-    closeCommandContext(ctx);
+    await closeCommandContext(ctx);
   }
 }

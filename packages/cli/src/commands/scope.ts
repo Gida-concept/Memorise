@@ -69,6 +69,6 @@ export async function scopeCommand(description: string, opts: Record<string, any
       ]));
     }
   } finally {
-    closeCommandContext(ctx);
+    await closeCommandContext(ctx);
   }
 }

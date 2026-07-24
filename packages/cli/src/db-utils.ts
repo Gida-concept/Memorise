@@ -20,8 +20,8 @@ export async function getCommandContext(opts: Record<string, any>): Promise<Comm
   return { config, db, opts };
 }
 
-export function closeCommandContext(ctx: CommandContext): void {
-  closeDb(ctx.db);
+export async function closeCommandContext(ctx: CommandContext): Promise<void> {
+  await closeDb(ctx.db);
 }
 
 export function outputJson(data: unknown, opts: Record<string, any>): void {

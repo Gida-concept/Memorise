@@ -30,9 +30,11 @@
     "ignore": "^6.0.0",
     "lowdb": "^7.0.1",
     "minimatch": "^10.0.0",
+    "proper-lockfile": "^4.1.2",
     "toml": "^3.0.0"
   },
   "devDependencies": {
+    "@types/proper-lockfile": "^4.1.4",
     "tsup": "^8.2.0",
     "typescript": "^5.5.0"
   }

@@ -65,6 +65,6 @@ export async function logCommand(title: string, opts: Record<string, any>): Prom
       ]));
     }
   } finally {
-    closeCommandContext(ctx);
+    await closeCommandContext(ctx);
   }
 }

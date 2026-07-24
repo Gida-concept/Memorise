@@ -57,7 +57,7 @@ export async function initCommand(opts: Record<string, any>): Promise<void> {
       }
       throw new PmCliError(`Database initialization failed: ${err}`, ExitCode.CONFIG_ERROR);
     }
-    closeDb(db);
+    await closeDb(db);
 
     // Write default rules.toml (shipped defaults with all rules)
     fs.writeFileSync(rulesPath, DEFAULT_RULES_TOML, 'utf-8');
@@ -180,7 +180,7 @@ export async function initCommand(opts: Record<string, any>): Promise<void> {
     try {
       const db = await openDb({ path: dbPath });
       const registry = db.prepare('SELECT COUNT(*) as count FROM file_registry').get() as { count: number };
-      closeDb(db);
+      await closeDb(db);
 
       if (registry.count < 5) {
         console.log(Colors.info('\nProject appears empty. Would you like to scaffold a production-grade project?'));

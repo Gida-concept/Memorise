@@ -70,6 +70,6 @@ export async function filesCommand(opts: Record<string, any>): Promise<void> {
       }
     }
   } finally {
-    closeCommandContext(ctx);
+    await closeCommandContext(ctx);
   }
 }

@@ -59,6 +59,6 @@ export async function blockersCommand(opts: Record<string, any>): Promise<void> 
       console.log(Colors.muted(`\n${filtered.length} blocker${filtered.length !== 1 ? 's' : ''}`));
     }
   } finally {
-    closeCommandContext(ctx);
+    await closeCommandContext(ctx);
   }
 }

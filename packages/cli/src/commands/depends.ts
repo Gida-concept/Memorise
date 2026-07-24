@@ -63,6 +63,6 @@ export async function dependsCommand(filePath: string, opts: Record<string, any>
       }
     }
   } finally {
-    closeCommandContext(ctx);
+    await closeCommandContext(ctx);
   }
 }

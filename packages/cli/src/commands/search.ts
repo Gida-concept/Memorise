@@ -82,6 +82,6 @@ export async function searchCommand(query: string, opts: Record<string, any>): P
       console.log(Colors.muted(`  ${topResults.length} result${topResults.length !== 1 ? 's' : ''}`));
     }
   } finally {
-    closeCommandContext(ctx);
+    await closeCommandContext(ctx);
   }
 }

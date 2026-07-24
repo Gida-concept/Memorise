@@ -2,6 +2,10 @@ import { Low } from 'lowdb';
 import { JSONFile } from 'lowdb/node';
 import path from 'path';
 import fs from 'fs';
+import lockfile from 'proper-lockfile';
+
+const LOCK_RETRY = { retries: 20, minTimeout: 50, maxTimeout: 2000, stale: 10000 };
+const LOCK_DIR_SUFFIX = '.lock';
 
 // ---- Config ----
 
@@ -634,7 +638,7 @@ export class Statement {
 
 export class DbWrapper {
   private low: Low<DbData>;
-  private filePath: string | null;
+  private _filePath: string | null;
   private _saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private _inTransaction = false;
   /** Snapshot of data for transaction rollback */
@@ -642,7 +646,7 @@ export class DbWrapper {
 
   constructor(low: Low<DbData>, filePath: string | null = null) {
     this.low = low;
-    this.filePath = filePath;
+    this._filePath = filePath;
   }
 
   /** Expose low.data for the mini query engine */
@@ -693,18 +697,32 @@ export class DbWrapper {
     return new Statement(this, sql);
   }
 
-  close(): void {
+  async close(): Promise<void> {
     if (this._saveDebounceTimer) {
       clearTimeout(this._saveDebounceTimer);
       this._saveDebounceTimer = null;
     }
-    this.save();
+    await this.save();
   }
 
-  save(): void {
-    if (this.filePath && this.low.data) {
+  /**
+   * Release the exclusive file lock acquired by openDb.
+   * Safe to call multiple times — subsequent calls are no-ops.
+   */
+  async releaseLock(): Promise<void> {
+    if (this._filePath) {
       try {
-        this.low.write();
+        await lockfile.unlock(this._filePath, { lockfilePath: lockPath(this._filePath) });
+      } catch {
+        // Lock may already be released on crash recovery — best-effort
+      }
+    }
+  }
+
+  async save(): Promise<void> {
+    if (this._filePath && this.low.data) {
+      try {
+        await this.low.write();
       } catch (err) {
         // Best-effort save
       }
@@ -786,6 +804,10 @@ const migrations: Migration[] = [
 
 // ---- Open / Migrate / Close ----
 
+function lockPath(dbPath: string): string {
+  return dbPath + LOCK_DIR_SUFFIX;
+}
+
 export async function openDb(config: DbConfig): Promise<DbWrapper> {
   let low: Low<DbData>;
 
@@ -795,6 +817,18 @@ export async function openDb(config: DbConfig): Promise<DbWrapper> {
     const dir = path.dirname(config.path);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
+    }
+
+    // Acquire exclusive file lock (retries with backoff for up to ~15s)
+    if (!config.memory) {
+      const lock = lockPath(config.path);
+      try {
+        await lockfile.lock(config.path, { ...LOCK_RETRY, lockfilePath: lock });
+      } catch {
+        throw new Error(
+          `Could not acquire database lock for ${config.path}. Another PM Agent process may be active.`
+        );
+      }
     }
 
     // Detect old sql.js SQLite binary files (start with "SQLite format 3\0")
@@ -867,8 +901,9 @@ export function migrate(db: DbWrapper): void {
   }
 }
 
-export function closeDb(db: DbWrapper): void {
-  db.close();
+export async function closeDb(db: DbWrapper): Promise<void> {
+  await db.close();
+  await db.releaseLock();
 }
 
 type IdPrefix = 'ADR' | 'BLK' | 'NOTE' | 'TASK';

@@ -8,7 +8,7 @@ import { PmCliError } from '../errors.js';
 async function getRulesPath(opts: Record<string, any>): Promise<string> {
   const ctx = await getCommandContext(opts);
   const rulesPath = ctx.config.rules?.config_path;
-  closeCommandContext(ctx);
+  await closeCommandContext(ctx);
 
   if (!rulesPath || !fs.existsSync(rulesPath)) {
     throw new PmCliError('Rules file not found. Run `pm init` first.', ExitCode.CONFIG_ERROR);

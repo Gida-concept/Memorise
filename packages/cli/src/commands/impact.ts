@@ -52,6 +52,6 @@ export async function impactCommand(filePath: string, opts: Record<string, any>)
       }
     }
   } finally {
-    closeCommandContext(ctx);
+    await closeCommandContext(ctx);
   }
 }

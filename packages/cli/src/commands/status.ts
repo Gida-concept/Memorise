@@ -36,6 +36,6 @@ export async function statusCommand(opts: Record<string, any>): Promise<void> {
       ]));
     }
   } finally {
-    closeCommandContext(ctx);
+    await closeCommandContext(ctx);
   }
 }

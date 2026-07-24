@@ -73,7 +73,7 @@ async function buildContext(dbPath: string): Promise<Record<string, unknown>> {
     const openTasks = dbInstance.prepare("SELECT id, title, status FROM tasks WHERE status IN ('todo', 'in_progress', 'blocked')").all();
     context.open_tasks = openTasks;
 
-    closeDb(db);
+    await closeDb(db);
   } catch {
     // DB not available — enforce against what we have
     context.db_error = 'Could not open project database';
