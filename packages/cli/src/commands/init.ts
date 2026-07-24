@@ -168,13 +168,8 @@ export async function initCommand(opts: Record<string, any>): Promise<void> {
     }
 
     // Auto-install hooks into .claude/hooks/
-    try {
-      spinner.text = 'Installing PM Agent hooks...';
-      installHooks(process.cwd());
-    } catch {
-      // Hook installation is best-effort; don't block init
-      console.log(Colors.warning('\n  Hooks installation skipped (not a blocker)'));
-    }
+    spinner.text = 'Installing PM Agent hooks...';
+    installHooks(process.cwd());
 
     // Check if project appears empty and offer scaffolding
     try {
