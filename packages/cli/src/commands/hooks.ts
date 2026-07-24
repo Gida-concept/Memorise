@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import { Colors } from '../formatters.js';
 import { ExitCode } from '../exit-codes.js';
@@ -11,7 +12,7 @@ import { PmCliError } from '../errors.js';
  */
 function resolveHooksPackagePath(): string | null {
   const searchRoots = [
-    path.dirname(new URL(import.meta.url).pathname),
+    path.dirname(fileURLToPath(import.meta.url)),
     process.cwd(),
   ];
 
@@ -48,7 +49,7 @@ function resolveHooksPackagePath(): string | null {
  * 3. Walk up to find it from require
  */
 function resolveHooksSrcPath(): string | null {
-  const modulePath = path.dirname(new URL(import.meta.url).pathname);
+  const modulePath = path.dirname(fileURLToPath(import.meta.url));
 
   // 1. Monorepo dev: walk up from CLI module to find packages/hooks/src
   const monorepoPath = path.resolve(modulePath, '..', '..', '..', '..', 'packages', 'hooks', 'src');

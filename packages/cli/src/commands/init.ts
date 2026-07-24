@@ -167,9 +167,14 @@ export async function initCommand(opts: Record<string, any>): Promise<void> {
       // CLAUDE.md creation is best-effort
     }
 
-    // Auto-install hooks into .claude/hooks/
+    // Auto-install hooks into .claude/hooks/ (non-fatal)
     spinner.text = 'Installing PM Agent hooks...';
-    installHooks(process.cwd());
+    try {
+      installHooks(process.cwd());
+    } catch {
+      console.log(Colors.warning('\n  PM Agent hooks package not found. Hooks will not be installed.'));
+      console.log(Colors.muted('  Install it manually: npm install @gida-concept/pm-agent-hooks'));
+    }
 
     // Check if project appears empty and offer scaffolding
     try {
