@@ -797,11 +797,25 @@ export async function openDb(config: DbConfig): Promise<DbWrapper> {
       fs.mkdirSync(dir, { recursive: true });
     }
 
+    // Detect old sql.js SQLite binary files (start with "SQLite format 3\0")
+    // and remove them so LowDB can create a fresh JSON database.
+    if (fs.existsSync(config.path)) {
+      const header = fs.readFileSync(config.path, { encoding: 'utf-8', flag: 'r' }).slice(0, 20);
+      if (header.startsWith('SQLite format 3')) {
+        fs.unlinkSync(config.path);
+      }
+    }
+
     const adapter = new JSONFile<DbData>(config.path);
     low = new Low(adapter, createEmptyData());
 
     // Read existing data
-    await low.read();
+    try {
+      await low.read();
+    } catch {
+      // If JSON parse fails (e.g. corrupt file), reset to empty
+      low.data = createEmptyData();
+    }
     if (!low.data || Object.keys(low.data).length === 0) {
       low.data = createEmptyData();
     }
