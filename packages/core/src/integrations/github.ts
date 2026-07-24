@@ -65,7 +65,7 @@ export class GitHubIntegration implements Integration {
 
     // Detect from git remote
     try {
-      const remote = execSync('git remote get-url origin 2>/dev/null', { encoding: 'utf-8', timeout: 5000 }).trim();
+      const remote = execSync('git remote get-url origin', { encoding: 'utf-8', timeout: 5000, stdio: ['pipe', 'pipe', 'ignore'] }).trim();
       // SSH: git@github.com:owner/repo.git
       const sshMatch = remote.match(/git@([^:]+):(.+?)(?:\.git)?$/);
       // HTTPS: https://github.com/owner/repo.git
