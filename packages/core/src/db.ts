@@ -2,6 +2,8 @@ import initSqlJs, { Database as SqlJsDatabase } from 'sql.js';
 import type { SqlJsStatic } from 'sql.js';
 import path from 'path';
 import fs from 'fs';
+import { createRequire } from 'module';
+import { pathToFileURL } from 'url';
 
 // ---- Config ----
 
@@ -305,7 +307,28 @@ let sqlJsInitPromise: Promise<SqlJsStatic> | null = null;
 
 async function ensureSqlJs(): Promise<SqlJsStatic> {
   if (!sqlJsInitPromise) {
-    sqlJsInitPromise = initSqlJs();
+    sqlJsInitPromise = initSqlJs({
+      locateFile: (file: string) => {
+        try {
+          // When installed globally (npm install -g), sql.js's default WASM loader
+          // can't find sql-wasm.wasm on Windows, causing N(44) ENOENT crashes.
+          // Use Node.js module resolution to find the WASM binary at runtime.
+          //
+          // In CJS (tsup compiled output), __dirname is available directly.
+          // In native ESM, import.meta.url is available.
+          // 'typeof __dirname' is safe in both modes (returns 'undefined' when undeclared).
+          const baseUrl: string | URL =
+            typeof __dirname === 'string'
+              ? pathToFileURL(path.join(__dirname, '_resolve_helper.js'))
+              : import.meta.url;
+          const _require = createRequire(baseUrl);
+          return _require.resolve('sql.js/dist/' + file);
+        } catch {
+          // Fallback: let sql.js use its default loader
+          return file;
+        }
+      },
+    });
   }
   return sqlJsInitPromise;
 }
