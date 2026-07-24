@@ -18,6 +18,8 @@ import { searchCommand } from './commands/search.js';
 import { archCommand } from './commands/arch.js';
 import { filesCommand } from './commands/files.js';
 import { understandCommand } from './commands/understand.js';
+import { hooksCommand } from './commands/hooks.js';
+import { enforceCommand } from './commands/enforce.js';
 import { Colors } from './formatters.js';
 import { ExitCode } from './exit-codes.js';
 import { PmCliError } from './errors.js';
@@ -198,6 +200,18 @@ program
   .command('understand')
   .description('Deep semantic analysis of the codebase — exports, imports, types, module organization, frameworks, and entry points')
   .action((opts) => understandCommand(opts));
+
+program
+  .command('hooks')
+  .description('Manage Claude Code hooks')
+  .argument('<action>', 'Action: setup, status, remove')
+  .action((action, opts) => hooksCommand(action, opts));
+
+program
+  .command('enforce')
+  .description('Run rules engine against project state')
+  .option('--json', 'JSON output')
+  .action((opts) => enforceCommand(opts));
 
 // ---- Parse -----------------------------------------------------------
 
