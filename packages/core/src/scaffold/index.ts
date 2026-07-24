@@ -255,40 +255,43 @@ dist/
   filesCreated.push('.gitignore');
 
   // ─── README.md ───
-  const projectTypeLabel =
-    options.projectType === 'api'
-      ? 'API service'
-      : options.projectType === 'web-app'
-        ? 'Web application'
-        : options.projectType === 'cli-tool'
-          ? 'CLI tool'
-          : 'TypeScript library';
+  const readmePath = path.join(projectPath, 'README.md');
+  if (!fs.existsSync(readmePath)) {
+    const projectTypeLabel =
+      options.projectType === 'api'
+        ? 'API service'
+        : options.projectType === 'web-app'
+          ? 'Web application'
+          : options.projectType === 'cli-tool'
+            ? 'CLI tool'
+            : 'TypeScript library';
 
-  const readmeLines: string[] = [
-    `# ${projectDirName}`,
-    '',
-    `${projectTypeLabel} built with ${framework !== 'none' ? framework : 'TypeScript'}${options.testing !== 'none' ? `, tested with ${options.testing}` : ''}.`,
-    '',
-    '## Getting Started',
-    '',
-    '```bash',
-    `# Install dependencies`,
-    `${options.packageManager} install`,
-    '',
-    `# Start dev server`,
-    `${options.packageManager} run dev`,
-    '',
-    `# Build`,
-    `${options.packageManager} run build`,
-  ];
+    const readmeLines: string[] = [
+      `# ${projectDirName}`,
+      '',
+      `${projectTypeLabel} built with ${framework !== 'none' ? framework : 'TypeScript'}${options.testing !== 'none' ? `, tested with ${options.testing}` : ''}.`,
+      '',
+      '## Getting Started',
+      '',
+      '```bash',
+      `# Install dependencies`,
+      `${options.packageManager} install`,
+      '',
+      `# Start dev server`,
+      `${options.packageManager} run dev`,
+      '',
+      `# Build`,
+      `${options.packageManager} run build`,
+    ];
 
-  if (options.testing !== 'none') {
-    readmeLines.push('', `# Test`, `${options.packageManager} test`);
+    if (options.testing !== 'none') {
+      readmeLines.push('', `# Test`, `${options.packageManager} test`);
+    }
+
+    readmeLines.push('```', '');
+    fs.writeFileSync(readmePath, readmeLines.join('\n'));
+    filesCreated.push('README.md');
   }
-
-  readmeLines.push('```', '');
-  fs.writeFileSync(path.join(projectPath, 'README.md'), readmeLines.join('\n'));
-  filesCreated.push('README.md');
 
   // ─── .github/workflows/ci.yml ───
   if (options.addCI) {

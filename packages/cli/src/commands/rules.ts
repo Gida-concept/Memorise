@@ -1,14 +1,14 @@
 import fs from 'fs';
-import { loadRules, addRule, removeRule, toggleRule } from '@gida-concept/pm-agent-core';
-import { getCommandContext, closeCommandContext, outputJson, shouldOutputJson } from '../db-utils.js';
+import { loadConfig, loadRules, addRule, removeRule, toggleRule } from '@gida-concept/pm-agent-core';
+import { outputJson, shouldOutputJson } from '../db-utils.js';
 import { Colors, formatTable } from '../formatters.js';
 import { ExitCode } from '../exit-codes.js';
 import { PmCliError } from '../errors.js';
 
 async function getRulesPath(opts: Record<string, any>): Promise<string> {
-  const ctx = await getCommandContext(opts);
-  const rulesPath = ctx.config.rules?.config_path;
-  await closeCommandContext(ctx);
+  const configPath = opts.config || process.env.PM_AGENT_CONFIG || undefined;
+  const config = loadConfig(configPath);
+  const rulesPath = config.rules?.config_path;
 
   if (!rulesPath || !fs.existsSync(rulesPath)) {
     throw new PmCliError('Rules file not found. Run `pm init` first.', ExitCode.CONFIG_ERROR);

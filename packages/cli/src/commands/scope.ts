@@ -7,7 +7,7 @@ import { confirmPrompt } from '../prompts.js';
 
 export async function scopeCommand(description: string, opts: Record<string, any>): Promise<void> {
   const committed = opts.committed;
-  if (committed == null) {
+  if (committed == null || Number.isNaN(committed)) {
     throw new PmCliError('--committed <days> is required for scope check', ExitCode.GENERAL_ERROR);
   }
 

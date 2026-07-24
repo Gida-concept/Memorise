@@ -35,6 +35,7 @@ export async function initCommand(opts: Record<string, any>): Promise<void> {
     fs.mkdirSync(dataDir, { recursive: true });
 
     // Write default config.toml (fill in project-specific values)
+    // Note: TOML config paths must use forward slashes even on Windows
     const defaultConfig = DEFAULT_CONFIG_TOML
       .replace('name = ""', `name = "${projectName}"`)
       .replace('root = ""', `root = "${process.cwd().replace(/\\/g, '/')}"`)
@@ -102,12 +103,12 @@ export async function initCommand(opts: Record<string, any>): Promise<void> {
         }
       }
     } catch {
-      // Integration detection failed silently — don't block init
+      console.warn(Colors.muted('[init] Integration detection failed — continuing without integration config'));
     }
 
     // Always run initial scan + semantic analysis
     spinner.text = 'Running initial scan...';
-    await scanCommand({ full: true });
+    await scanCommand({ full: true, config: opts.config });
 
     // Semantic analysis: extract exports, imports, types from every file
     try {
@@ -115,10 +116,8 @@ export async function initCommand(opts: Record<string, any>): Promise<void> {
       const { understandCommand } = await import('./understand.js');
       await understandCommand({});
     } catch {
-      // Semantic analysis is best-effort; don't block init
+      console.warn(Colors.muted('[init] Semantic analysis failed — continuing without analysis'));
     }
-
-    // Write CLAUDE.md with PM Agent instructions
     try {
       const claudeMdPath = path.join(projectRoot, 'CLAUDE.md');
       if (!fs.existsSync(claudeMdPath) || opts.force) {
@@ -164,7 +163,7 @@ export async function initCommand(opts: Record<string, any>): Promise<void> {
         fs.writeFileSync(claudeMdPath, pmAgentInstructions.join('\n'), 'utf-8');
       }
     } catch {
-      // CLAUDE.md creation is best-effort
+      console.warn(Colors.muted('[init] CLAUDE.md creation failed — continuing without CLAUDE.md'));
     }
 
     // Auto-install hooks into .claude/hooks/ (non-fatal)
@@ -186,6 +185,8 @@ export async function initCommand(opts: Record<string, any>): Promise<void> {
       await closeDb(db);
 
       if (registry.count < 5) {
+        // Stop the spinner before interactive prompts to avoid overlapping output
+        spinner.stop();
         console.log(Colors.info('\nProject appears empty. Would you like to scaffold a production-grade project?'));
         const { scaffold } = await inquirer.prompt([{
           type: 'confirm',
@@ -271,12 +272,12 @@ export async function initCommand(opts: Record<string, any>): Promise<void> {
           result.nextSteps.forEach(s => console.log(Colors.muted('  • ' + s)));
 
           // Re-run scan so the new files are indexed
-          spinner.text = 'Re-scanning after scaffold...';
-          await scanCommand({ full: true });
+          spinner.start('Re-scanning after scaffold...');
+          await scanCommand({ full: true, config: opts.config });
         }
       }
     } catch {
-      // Scaffolding is best-effort; don't block init
+      console.warn(Colors.muted('[init] Scaffolding failed — continuing without scaffold'));
     }
 
     spinner.succeed(`PM Agent initialized for "${projectName}"`);

@@ -33,6 +33,7 @@ function resolveHooksPackagePath(): string | null {
         }
       }
     } catch {
+      // module not found from this search root — try next
       continue;
     }
   }
@@ -76,6 +77,15 @@ function resolveHooksSrcPath(): string | null {
     const cwd = process.cwd();
     const localPath = path.join(cwd, 'node_modules', '@gida-concept', 'pm-agent-hooks', 'src');
     if (fs.existsSync(path.join(localPath, 'hook-utils.mjs'))) {
+      // Verify the resolved path is actually inside a node_modules structure
+      try {
+        const realPath = fs.realpathSync(localPath);
+        if (!realPath.includes('node_modules')) {
+          return null;
+        }
+      } catch {
+        return null;
+      }
       return localPath;
     }
   } catch {

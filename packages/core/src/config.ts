@@ -1,4 +1,5 @@
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import toml from 'toml';
 
@@ -72,7 +73,7 @@ function resolveConfigPath(): string {
   }
 
   return path.join(
-    process.env.HOME || process.env.USERPROFILE || '~',
+    process.env.HOME || process.env.USERPROFILE || os.homedir(),
     '.config',
     'pm-agent',
     'config.toml',
@@ -81,7 +82,7 @@ function resolveConfigPath(): string {
 
 export function loadConfig(overridePath?: string): PmAgentConfig {
   const configPath = overridePath || resolveConfigPath();
-  const resolvedPath = configPath.replace(/^~/, process.env.HOME || process.env.USERPROFILE || '');
+  const resolvedPath = configPath.replace(/^~/, process.env.HOME || process.env.USERPROFILE || os.homedir());
 
   if (!fs.existsSync(resolvedPath)) {
     throw new Error(
@@ -96,11 +97,11 @@ export function loadConfig(overridePath?: string): PmAgentConfig {
 }
 
 export function getDefaultConfigPath(): string {
-  const home = process.env.HOME || process.env.USERPROFILE || '~';
+  const home = process.env.HOME || process.env.USERPROFILE || os.homedir();
   return path.join(home, '.config', 'pm-agent', 'config.toml');
 }
 
 export function getDefaultDataDir(projectName: string): string {
-  const home = process.env.HOME || process.env.USERPROFILE || '~';
+  const home = process.env.HOME || process.env.USERPROFILE || os.homedir();
   return path.join(home, '.local', 'share', 'pm-agent', `${projectName}.db`);
 }

@@ -1,8 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import toml from 'toml';
-import { loadRules, enforce, openDb, closeDb } from '@gida-concept/pm-agent-core';
-import type { EnforcementResult, PmAgentConfig } from '@gida-concept/pm-agent-core';
+import { loadConfig, loadRules, enforce, openDb, closeDb } from '@gida-concept/pm-agent-core';
+import type { EnforcementResult } from '@gida-concept/pm-agent-core';
 import { Colors } from '../formatters.js';
 import { ExitCode } from '../exit-codes.js';
 import { PmCliError } from '../errors.js';
@@ -11,36 +10,31 @@ import { PmCliError } from '../errors.js';
  * Resolve the project's .pm-agent directory and config.
  */
 function resolveConfig(): { configDir: string; configPath: string; rulesPath: string; dbPath: string } | null {
-  const projectRoot = process.cwd();
-  const configDir = path.join(projectRoot, '.pm-agent');
-  const configPath = process.env.PM_AGENT_CONFIG || path.join(configDir, 'config.toml');
+  const configPath = process.env.PM_AGENT_CONFIG || path.join(process.cwd(), '.pm-agent', 'config.toml');
 
   if (!fs.existsSync(configPath)) {
     return null;
   }
 
-  // Try to read rules_path from config
-  let rulesPath = path.join(configDir, 'rules.toml');
-  let dbPath = path.join(configDir, 'pm.db');
+  const configDir = path.dirname(configPath);
 
   try {
-    const raw = fs.readFileSync(configPath, 'utf-8');
-    const parsed = toml.parse(raw);
-
-    // Interpolate env vars
-    const config = parsed as PmAgentConfig;
-
-    if (config.rules?.config_path) {
-      rulesPath = config.rules.config_path;
-    }
-    if (config.memory?.path) {
-      dbPath = config.memory.path;
-    }
+    const config = loadConfig();
+    return {
+      configDir,
+      configPath,
+      rulesPath: config.rules?.config_path || path.join(configDir, 'rules.toml'),
+      dbPath: config.memory?.path || path.join(configDir, 'pm.db'),
+    };
   } catch {
-    // Use defaults
+    // Fallback to defaults
+    return {
+      configDir,
+      configPath,
+      rulesPath: path.join(configDir, 'rules.toml'),
+      dbPath: path.join(configDir, 'pm.db'),
+    };
   }
-
-  return { configDir, configPath, rulesPath, dbPath };
 }
 
 /**
@@ -53,8 +47,9 @@ async function buildContext(dbPath: string): Promise<Record<string, unknown>> {
   };
 
   // Try to load context from DB
+  let db;
   try {
-    const db = await openDb({ path: dbPath });
+    db = await openDb({ path: dbPath });
     const dbInstance = db as unknown as { prepare: (sql: string) => { get: () => Record<string, unknown>; all: () => Record<string, unknown>[] } };
 
     // File registry count
@@ -72,11 +67,11 @@ async function buildContext(dbPath: string): Promise<Record<string, unknown>> {
     // Open tasks
     const openTasks = dbInstance.prepare("SELECT id, title, status FROM tasks WHERE status IN ('todo', 'in_progress', 'blocked')").all();
     context.open_tasks = openTasks;
-
-    await closeDb(db);
   } catch {
     // DB not available — enforce against what we have
     context.db_error = 'Could not open project database';
+  } finally {
+    if (db) await closeDb(db);
   }
 
   return context;
@@ -181,7 +176,7 @@ export async function enforceCommand(opts: Record<string, any>): Promise<void> {
 
     // Exit with error code if blocked
     if (result.status === 'rejected') {
-      process.exit(ExitCode.RULE_BLOCKED);
+      throw new PmCliError('Rule enforcement blocked.', ExitCode.RULE_BLOCKED);
     }
 
   } catch (err) {

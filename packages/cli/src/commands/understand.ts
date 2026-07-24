@@ -1,5 +1,5 @@
 import { semanticScan } from '@gida-concept/pm-agent-core';
-import { loadConfig, openDb, getDefaultDataDir } from '@gida-concept/pm-agent-core';
+import { loadConfig, openDb, closeDb, getDefaultDataDir } from '@gida-concept/pm-agent-core';
 import { Colors, formatTable } from '../formatters.js';
 import { ExitCode } from '../exit-codes.js';
 import { PmCliError } from '../errors.js';
@@ -81,6 +81,6 @@ export async function understandCommand(opts: Record<string, any>): Promise<void
 
     console.log(`\n${Colors.muted(`Total: ${pm.moduleSummary.totalFiles} files in registry, ${pm.moduleSummary.sourceFiles || '?'} source files analyzed`)}`);
   } finally {
-    db.close();
+    await closeDb(db);
   }
 }

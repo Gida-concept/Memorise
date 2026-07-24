@@ -215,6 +215,16 @@ program
 
 // ---- Parse -----------------------------------------------------------
 
+process.on('unhandledRejection', (reason) => {
+  console.error(Colors.error(`Unhandled rejection: ${reason}`));
+  process.exit(ExitCode.GENERAL_ERROR);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error(Colors.error(`Uncaught exception: ${err.message}`));
+  process.exit(ExitCode.GENERAL_ERROR);
+});
+
 (async () => {
   try {
     await program.parseAsync(process.argv);
