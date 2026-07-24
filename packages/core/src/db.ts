@@ -268,7 +268,7 @@ const migrations: Migration[] = [
           created_at TEXT DEFAULT (datetime('now'))
         );
 
-        CREATE VIRTUAL TABLE IF NOT EXISTS doc_fts USING fts5(
+        CREATE VIRTUAL TABLE IF NOT EXISTS doc_fts USING fts4(
           path, title, content, content=doc_index, content_rowid=rowid
         );
 
@@ -288,6 +288,42 @@ const migrations: Migration[] = [
           INSERT INTO doc_fts(rowid, path, title, content)
           VALUES (new.rowid, new.path, new.title, new.content);
         END;
+      `);
+    },
+  },
+  {
+    name: '004_fix_fts4',
+    up: (db) => {
+      // FTS5 not available in sql.js WASM build — downgrade to FTS4
+      db.exec(`
+        DROP TABLE IF EXISTS doc_fts;
+        DROP TRIGGER IF EXISTS doc_index_ai;
+        DROP TRIGGER IF EXISTS doc_index_ad;
+        DROP TRIGGER IF EXISTS doc_index_au;
+
+        CREATE VIRTUAL TABLE IF NOT EXISTS doc_fts USING fts4(
+          path, title, content, content=doc_index, content_rowid=rowid
+        );
+
+        CREATE TRIGGER IF NOT EXISTS doc_index_ai AFTER INSERT ON doc_index BEGIN
+          INSERT INTO doc_fts(rowid, path, title, content)
+          VALUES (new.rowid, new.path, new.title, new.content);
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS doc_index_ad AFTER DELETE ON doc_index BEGIN
+          INSERT INTO doc_fts(doc_fts, rowid, path, title, content)
+          VALUES ('delete', old.rowid, old.path, old.title, old.content);
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS doc_index_au AFTER UPDATE ON doc_index BEGIN
+          INSERT INTO doc_fts(doc_fts, rowid, path, title, content)
+          VALUES ('delete', old.rowid, old.path, old.title, old.content);
+          INSERT INTO doc_fts(rowid, path, title, content)
+          VALUES (new.rowid, new.path, new.title, new.content);
+        END;
+
+        -- Re-index existing documents
+        INSERT INTO doc_fts(doc_fts) VALUES('rebuild');
       `);
     },
   },
@@ -341,10 +377,10 @@ export async function openDb(config: DbConfig): Promise<DbWrapper> {
     throw err;
   }
 
-  // Apply PRAGMAs
-  db.run('PRAGMA journal_mode = WAL');
-  db.run('PRAGMA busy_timeout = 5000');
-  db.run('PRAGMA foreign_keys = ON');
+  // Apply PRAGMAs — sql.js doesn't support WAL, so wrap in try-catch
+  try { db.run('PRAGMA journal_mode = MEMORY'); } catch { /* not supported in sql.js WASM */ }
+  try { db.run('PRAGMA busy_timeout = 5000'); } catch { /* not supported */ }
+  try { db.run('PRAGMA foreign_keys = ON'); } catch { /* not supported */ }
 
   const wrapper = new DbWrapper(db, config.memory ? null : config.path);
   migrate(wrapper);
