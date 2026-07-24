@@ -1,5 +1,5 @@
 import { scan as fullScan, scanIncremental, verify } from '@gida-concept/pm-agent-core';
-import { loadConfig, openDb, getDefaultDataDir } from '@gida-concept/pm-agent-core';
+import { loadConfig, openDb, closeDb, getDefaultDataDir } from '@gida-concept/pm-agent-core';
 import { Colors, formatTable } from '../formatters.js';
 import { ExitCode } from '../exit-codes.js';
 import { PmCliError } from '../errors.js';
@@ -71,6 +71,6 @@ export async function scanCommand(opts: Record<string, any>): Promise<void> {
       console.log(`${Colors.info('Entry points:')} ${result.architecture.entry_points.join(', ') || 'none'}`);
     }
   } finally {
-    db.close();
+    closeDb(db);
   }
 }
